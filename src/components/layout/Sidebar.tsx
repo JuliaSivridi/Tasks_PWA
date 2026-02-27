@@ -107,7 +107,8 @@ function InlineRename({
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export function Sidebar() {
-  const { selectedView, selectedFolderId, selectedLabelId, selectedPriorityId, setView, setCreateTaskOpen } = useUIStore()
+  const { selectedView, selectedFolderId, selectedLabelId, selectedPriorityId, setView, setCreateTaskOpen, setSidebarOpen } = useUIStore()
+  const goTo = (...args: Parameters<typeof setView>) => { setView(...args); setSidebarOpen(false) }
   const { folders, addFolder, updateFolder, deleteFolder } = useFoldersStore()
   const { labels, addLabel, renameLabel, deleteLabel } = useLabelsStore()
   const { moveTasksToFolder, stripLabelFromTasks } = useTasksStore()
@@ -149,7 +150,7 @@ export function Sidebar() {
           ]).map(({ view, label, icon }) => (
             <button
               key={view}
-              onClick={() => setView(view)}
+              onClick={() => goTo(view)}
               className={cn(
                 'flex items-center gap-2 w-full px-2 py-2 rounded-md text-base transition-colors hover:bg-accent',
                 selectedView === view && 'bg-accent font-medium text-primary',
@@ -171,7 +172,7 @@ export function Sidebar() {
             ] as const).map(p => (
               <button
                 key={p.id}
-                onClick={() => setView('priority', p.id)}
+                onClick={() => goTo('priority', p.id)}
                 className={cn(
                   'flex-1 flex items-center justify-center py-2 rounded-md transition-colors hover:bg-accent',
                   selectedView === 'priority' && selectedPriorityId === p.id && 'bg-accent',
@@ -216,7 +217,7 @@ export function Sidebar() {
             if (!inbox) return null
             return (
               <div
-                onClick={() => setView('folder', INBOX_FOLDER_ID)}
+                onClick={() => goTo('folder', INBOX_FOLDER_ID)}
                 className={cn(
                   'flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
                   selectedView === 'folder' && selectedFolderId === INBOX_FOLDER_ID && 'bg-accent font-medium text-primary',
@@ -241,7 +242,7 @@ export function Sidebar() {
                 />
               ) : (
                 <div
-                  onClick={() => setView('folder', folder.id)}
+                  onClick={() => goTo('folder', folder.id)}
                   className={cn(
                     'group flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
                     selectedView === 'folder' && selectedFolderId === folder.id && 'bg-accent font-medium text-primary',
@@ -318,7 +319,7 @@ export function Sidebar() {
                 />
               ) : (
                 <div
-                  onClick={() => setView('label', label.id)}
+                  onClick={() => goTo('label', label.id)}
                   className={cn(
                     'group flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
                     selectedView === 'label' && selectedLabelId === label.id && 'bg-accent font-medium',

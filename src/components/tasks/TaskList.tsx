@@ -160,6 +160,7 @@ function UpcomingView() {
                 'px-2 py-1 text-sm font-semibold mb-1',
                 group.isOverdue ? 'text-red-400'
                   : group.isToday ? 'text-emerald-500'
+                  : group.label === 'Tomorrow' ? 'text-orange-400'
                   : 'text-muted-foreground',
               )}>
                 {group.label}

@@ -254,7 +254,8 @@ export function TaskCreateModal({ open, editing, parentId = '', onClose }: Props
             )}
           </div>
 
-          <div className="flex justify-end pt-1 pb-1">
+          <div className="flex justify-end gap-2 pt-1 pb-1">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit">{editing ? 'Save' : 'Create'}</Button>
           </div>
         </form>

@@ -31,9 +31,16 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
 
   addTask: async (input) => {
+    const siblings = get().tasks.filter(t =>
+      t.folder_id === input.folder_id &&
+      t.parent_id === input.parent_id &&
+      t.status === 'pending',
+    )
+    const maxOrder = siblings.reduce((m, t) => Math.max(m, t.sort_order), -1)
     const task: Task = {
       id: generateId('tsk'),
       ...input,
+      sort_order: maxOrder + 1,
       created_at: now(),
       updated_at: now(),
       completed_at: '',

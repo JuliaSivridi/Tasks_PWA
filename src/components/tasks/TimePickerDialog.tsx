@@ -47,7 +47,7 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-xs">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Set deadline</DialogTitle>
         </DialogHeader>
@@ -76,7 +76,10 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
               </Button>
             )}
           </div>
-          <Button onClick={() => void handleSave()}>Save</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => void handleSave()}>Save</Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
