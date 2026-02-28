@@ -6,13 +6,18 @@ import { TaskList } from '@/components/tasks/TaskList'
 import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
 import { initialLoad } from '@/services/syncService'
+import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
 
 export function AppShell() {
   const { sidebarOpen, setSidebarOpen } = useUIStore()
   useSync()
 
   useEffect(() => {
-    void initialLoad()
+    const setup = async () => {
+      await ensureSpreadsheet()
+      await initialLoad()
+    }
+    void setup()
   }, [])
 
   return (

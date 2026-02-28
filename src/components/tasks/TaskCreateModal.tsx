@@ -157,7 +157,7 @@ export function TaskCreateModal({ open, editing, parentId = '', onClose }: Props
           {/* Labels */}
           {labels.length > 0 && (
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">Labels</Label>
+              <Label className="text-muted-foreground text-sm">Labels</Label>
               <div className="flex flex-wrap gap-1.5">
                 {labels.map(label => {
                   const selected = currentLabels.includes(label.id)
@@ -183,7 +183,7 @@ export function TaskCreateModal({ open, editing, parentId = '', onClose }: Props
 
           {/* Priority */}
           <div className="space-y-1.5">
-            <Label className="text-muted-foreground text-xs uppercase tracking-wide">Priority</Label>
+            <Label className="text-muted-foreground text-sm">Priority</Label>
             <div className="flex gap-2">
               {PRIORITY_OPTIONS.map(p => (
                 <button
@@ -208,11 +208,11 @@ export function TaskCreateModal({ open, editing, parentId = '', onClose }: Props
           {/* Deadline */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">Due date</Label>
+              <Label className="text-muted-foreground text-sm">Due date</Label>
               <Input type="date" {...register('deadline_date')} />
             </div>
             <div className="space-y-1">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wide">Time</Label>
+              <Label className="text-muted-foreground text-sm">Time</Label>
               <Input type="time" {...register('deadline_time')} />
             </div>
           </div>

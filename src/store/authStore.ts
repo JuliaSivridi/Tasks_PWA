@@ -12,8 +12,10 @@ interface AuthState {
   accessToken: string | null
   tokenExpiry: number | null
   isAuthenticated: boolean
+  spreadsheetId: string
   setToken: (token: string, expiresIn: number) => void
   setUser: (user: User) => void
+  setSpreadsheetId: (id: string) => void
   refreshToken: () => Promise<void>
   logout: () => void
 }
@@ -49,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       tokenExpiry: null,
       isAuthenticated: false,
+      spreadsheetId: '',
 
       setToken: (token, expiresIn) => {
         set({
@@ -60,6 +63,10 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => {
         set({ user })
+      },
+
+      setSpreadsheetId: (id) => {
+        set({ spreadsheetId: id })
       },
 
       refreshToken: () =>
@@ -90,6 +97,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
         tokenExpiry: state.tokenExpiry,
+        spreadsheetId: state.spreadsheetId,
       }),
     },
   ),

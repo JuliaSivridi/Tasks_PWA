@@ -52,6 +52,12 @@ export function useUpcomingGroups(): TaskGroup[] {
       if (b.isOverdue) return 1
       return a.key.localeCompare(b.key)
     })
+    // Within each group: sort by time (tasks without time go last)
+    for (const group of result) {
+      group.tasks.sort((a, b) =>
+        (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99'),
+      )
+    }
     return result
   }, [tasks])
 }
