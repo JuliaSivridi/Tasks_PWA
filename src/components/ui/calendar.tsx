@@ -25,6 +25,7 @@ function Calendar({
 
   return (
     <DayPicker
+      weekStartsOn={1}
       showOutsideDays={showOutsideDays}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:2rem] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",

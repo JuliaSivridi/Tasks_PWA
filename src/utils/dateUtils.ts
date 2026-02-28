@@ -78,25 +78,10 @@ export function formatCompletedAt(completedAt: string): string {
   return format(new Date(completedAt), 'MMM d, yyyy HH:mm')
 }
 
-/** For task second-line: shows weekday name within next 7 days, otherwise "MMM d". Appends time if provided. */
+/** For task second-line: "d MMM" (current year) or "d MMM yyyy" (other year). Appends time if provided. */
 export function formatTaskDeadlineLabel(deadlineDate: string, deadlineTime?: string): string {
   if (!deadlineDate) return ''
   const date = parseISO(deadlineDate)
-  const today = startOfDay(new Date())
-  const diff = differenceInCalendarDays(date, today)
-
-  let datePart: string
-  if (diff < 0) {
-    datePart = format(date, 'MMM d')
-  } else if (diff === 0) {
-    datePart = 'Today'
-  } else if (diff === 1) {
-    datePart = 'Tomorrow'
-  } else if (diff <= 7) {
-    datePart = format(date, 'EEEE')
-  } else {
-    datePart = format(date, 'MMM d')
-  }
-
+  const datePart = format(date, date.getFullYear() === new Date().getFullYear() ? 'd MMM' : 'd MMM yyyy')
   return deadlineTime ? `${datePart} ${deadlineTime}` : datePart
 }

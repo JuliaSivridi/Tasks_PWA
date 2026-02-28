@@ -62,6 +62,8 @@ export function useUpcomingGroups(): TaskGroup[] {
   }, [tasks])
 }
 
+const PRIORITY_ORDER: Record<string, number> = { urgent: 0, important: 1, normal: 2 }
+
 // ── Folder / label view: pending root tasks ───────────────────────────────────
 export function useFilteredRootTasks() {
   const tasks = useTasksStore((s) => s.tasks)
@@ -86,11 +88,15 @@ export function useFilteredRootTasks() {
       return pending
         .filter(t => selectedLabelId && t.labels.split(',').map(l => l.trim()).includes(selectedLabelId))
         .sort((a, b) => {
-          // Deadline first (earliest), then by created_at for undated tasks
+          // Priority first (urgent → important → normal)
+          const pa = PRIORITY_ORDER[a.priority] ?? 2
+          const pb = PRIORITY_ORDER[b.priority] ?? 2
+          if (pa !== pb) return pa - pb
+          // Then by deadline (earliest first, no deadline last)
           if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
           if (a.deadline_date) return -1
           if (b.deadline_date) return 1
-          return a.created_at.localeCompare(b.created_at)
+          return 0
         })
     }
 
@@ -98,14 +104,14 @@ export function useFilteredRootTasks() {
   }, [tasks, selectedView, selectedFolderId, selectedLabelId])
 }
 
-// ── Priority view: pending root tasks filtered by priority ────────────────────
+// ── Priority view: all pending tasks filtered by priority ─────────────────────
 export function usePriorityRootTasks() {
   const tasks = useTasksStore((s) => s.tasks)
   const { selectedPriorityId } = useUIStore()
 
   return useMemo(() => {
     return tasks
-      .filter(t => t.status === 'pending' && t.parent_id === '' && t.priority === selectedPriorityId)
+      .filter(t => t.status === 'pending' && t.priority === selectedPriorityId)
       .sort((a, b) => {
         // Deadline first (earliest), then by sort_order for undated tasks
         if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
