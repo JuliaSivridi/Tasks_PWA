@@ -187,7 +187,11 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
           <Checkbox
             checked={isCompleted}
             onCheckedChange={(v) => { if (v) void handleComplete() }}
-            className="flex-shrink-0"
+            className={cn(
+              'flex-shrink-0',
+              task.priority === 'urgent' && 'border-red-400 data-[state=checked]:bg-red-400 data-[state=checked]:border-red-400',
+              task.priority === 'important' && 'border-orange-400 data-[state=checked]:bg-orange-400 data-[state=checked]:border-orange-400',
+            )}
           />
 
           {/* Title */}

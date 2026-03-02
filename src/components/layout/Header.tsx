@@ -6,24 +6,17 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
-import { useLabelsStore } from '@/store/labelsStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriorityId } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId } = useUIStore()
   const { folders } = useFoldersStore()
-  const { labels } = useLabelsStore()
 
   const viewTitle = selectedView === 'upcoming' ? 'Upcoming'
+    : selectedView === 'all' ? 'All tasks'
     : selectedView === 'completed' ? 'Completed'
-    : selectedView === 'folder' ? (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
-    : selectedView === 'priority' ? (
-        selectedPriorityId === 'urgent' ? 'Urgent'
-        : selectedPriorityId === 'important' ? 'Important'
-        : 'Normal'
-      )
-    : (labels.find(l => l.id === selectedLabelId)?.name ?? 'Label')
+    : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 
   return (
     <header className="flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">

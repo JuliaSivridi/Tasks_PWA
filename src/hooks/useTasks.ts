@@ -64,62 +64,22 @@ export function useUpcomingGroups(): TaskGroup[] {
 
 export const PRIORITY_ORDER: Record<string, number> = { urgent: 0, important: 1, normal: 2 }
 
-// ── Folder / label view: pending root tasks ───────────────────────────────────
+// ── Folder view: pending root tasks ───────────────────────────────────────────
 export function useFilteredRootTasks() {
   const tasks = useTasksStore((s) => s.tasks)
-  const { selectedView, selectedFolderId, selectedLabelId } = useUIStore()
+  const { selectedFolderId } = useUIStore()
 
   return useMemo(() => {
-    const pending = tasks.filter(t => t.status === 'pending')
-    const roots = pending.filter(t => t.parent_id === '')
-
-    if (selectedView === 'folder') {
-      return roots
-        .filter(t => {
-          if (selectedFolderId === INBOX_FOLDER_ID) {
-            return t.folder_id === INBOX_FOLDER_ID || t.folder_id === ''
-          }
-          return t.folder_id === selectedFolderId
-        })
-        .sort((a, b) => a.sort_order - b.sort_order)
-    }
-
-    if (selectedView === 'label') {
-      return pending
-        .filter(t => selectedLabelId && t.labels.split(',').map(l => l.trim()).includes(selectedLabelId))
-        .sort((a, b) => {
-          // Priority first (urgent → important → normal)
-          const pa = PRIORITY_ORDER[a.priority] ?? 2
-          const pb = PRIORITY_ORDER[b.priority] ?? 2
-          if (pa !== pb) return pa - pb
-          // Then by deadline (earliest first, no deadline last)
-          if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
-          if (a.deadline_date) return -1
-          if (b.deadline_date) return 1
-          return 0
-        })
-    }
-
-    return roots.sort((a, b) => a.sort_order - b.sort_order)
-  }, [tasks, selectedView, selectedFolderId, selectedLabelId])
-}
-
-// ── Priority view: all pending tasks filtered by priority ─────────────────────
-export function usePriorityRootTasks() {
-  const tasks = useTasksStore((s) => s.tasks)
-  const { selectedPriorityId } = useUIStore()
-
-  return useMemo(() => {
-    return tasks
-      .filter(t => t.status === 'pending' && t.priority === selectedPriorityId)
-      .sort((a, b) => {
-        // Deadline first (earliest), then by sort_order for undated tasks
-        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
-        if (a.deadline_date) return -1
-        if (b.deadline_date) return 1
-        return a.sort_order - b.sort_order
+    const roots = tasks.filter(t => t.status === 'pending' && t.parent_id === '')
+    return roots
+      .filter(t => {
+        if (selectedFolderId === INBOX_FOLDER_ID) {
+          return t.folder_id === INBOX_FOLDER_ID || t.folder_id === ''
+        }
+        return t.folder_id === selectedFolderId
       })
-  }, [tasks, selectedPriorityId])
+      .sort((a, b) => a.sort_order - b.sort_order)
+  }, [tasks, selectedFolderId])
 }
 
 // ── All tasks view: all pending tasks, flat ───────────────────────────────────

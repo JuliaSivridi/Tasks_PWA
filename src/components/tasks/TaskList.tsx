@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import { TaskItem } from './TaskItem'
 import { TaskCreateModal } from './TaskCreateModal'
-import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, usePriorityRootTasks, useAllTasks } from '@/hooks/useTasks'
+import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, useAllTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
@@ -246,34 +246,6 @@ function FolderView() {
   )
 }
 
-// ── Label view — flat list, no hierarchy ──────────────────────────────────────
-
-function LabelView() {
-  const tasks = useFilteredRootTasks()
-  const { setCreateTaskOpen } = useUIStore()
-
-  if (tasks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
-        <FolderOpen size={40} className="opacity-20" />
-        <p>No tasks</p>
-        <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
-          <Plus size={16} className="mr-1" /> Add task
-        </Button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="p-2">
-      {tasks.map(task => (
-        // hideChildren=true → flat list, no subtask expansion
-        <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
-      ))}
-    </div>
-  )
-}
-
 // ── All tasks view ────────────────────────────────────────────────────────────
 
 function AllTasksView() {
@@ -311,33 +283,6 @@ function AllTasksView() {
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-// ── Priority view ─────────────────────────────────────────────────────────────
-
-function PriorityView() {
-  const tasks = usePriorityRootTasks()
-  const { setCreateTaskOpen } = useUIStore()
-
-  if (tasks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
-        <FolderOpen size={40} className="opacity-20" />
-        <p>No tasks</p>
-        <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
-          <Plus size={16} className="mr-1" /> Add task
-        </Button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="p-2">
-      {tasks.map(task => (
-        <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
-      ))}
     </div>
   )
 }
@@ -415,8 +360,6 @@ export function TaskList() {
     if (selectedView === 'upcoming') return <UpcomingView />
     if (selectedView === 'all') return <AllTasksView />
     if (selectedView === 'completed') return <CompletedView />
-    if (selectedView === 'label') return <LabelView />
-    if (selectedView === 'priority') return <PriorityView />
     return <FolderView />
   }
 

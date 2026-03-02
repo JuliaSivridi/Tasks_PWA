@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { CalendarClock, CheckCircle2, LayoutList, Inbox, Plus, MoreHorizontal, Pencil, Trash2, Tag, Folder, RefreshCw, Flag } from 'lucide-react'
+import { CalendarClock, CheckCircle2, LayoutList, Inbox, Plus, MoreHorizontal, Pencil, Trash2, Folder, RefreshCw } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
-import { useLabelsStore } from '@/store/labelsStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useTasksStore } from '@/store/tasksStore'
 import { useSyncStore } from '@/store/syncStore'
@@ -11,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { LABEL_COLOR_PRESETS, INBOX_FOLDER_ID } from '@/utils/constants'
+import { INBOX_FOLDER_ID } from '@/utils/constants'
 import { format } from 'date-fns'
 import { fullSync } from '@/services/syncService'
 
@@ -21,32 +20,14 @@ function InlineCreate({
   placeholder,
   onSave,
   onCancel,
-  colorPicker,
-  color,
-  onColorChange,
 }: {
   placeholder: string
   onSave: (name: string) => void
   onCancel: () => void
-  colorPicker?: boolean
-  color?: string
-  onColorChange?: (c: string) => void
 }) {
   const [name, setName] = useState('')
   return (
     <div className="px-2 pb-1 space-y-1.5">
-      {colorPicker && onColorChange && (
-        <div className="flex gap-1 flex-wrap pt-1">
-          {LABEL_COLOR_PRESETS.map(c => (
-            <button
-              key={c}
-              onClick={() => onColorChange(c)}
-              className="w-4 h-4 rounded-full border-2 transition-all"
-              style={{ backgroundColor: c, borderColor: c === color ? '#1e293b' : 'transparent' }}
-            />
-          ))}
-        </div>
-      )}
       <div className="flex gap-1">
         <Input
           autoFocus
@@ -107,25 +88,18 @@ function InlineRename({
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export function Sidebar() {
-  const { selectedView, selectedFolderId, selectedLabelId, selectedPriorityId, setView, setCreateTaskOpen, setSidebarOpen } = useUIStore()
+  const { selectedView, selectedFolderId, setView, setCreateTaskOpen, setSidebarOpen } = useUIStore()
   const goTo = (...args: Parameters<typeof setView>) => { setView(...args); setSidebarOpen(false) }
   const { folders, addFolder, updateFolder, deleteFolder } = useFoldersStore()
-  const { labels, addLabel, renameLabel, deleteLabel } = useLabelsStore()
-  const { moveTasksToFolder, stripLabelFromTasks } = useTasksStore()
+  const { moveTasksToFolder } = useTasksStore()
   const { lastSyncAt, isSyncing } = useSyncStore()
 
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
   const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null)
 
-  const [creatingLabel, setCreatingLabel] = useState(false)
-  const [newLabelColor, setNewLabelColor] = useState(LABEL_COLOR_PRESETS[5])
-  const [renamingLabelId, setRenamingLabelId] = useState<string | null>(null)
-  const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null)
-
   const sortedFolders = [...folders].sort((a, b) => a.sort_order - b.sort_order)
   const deletingFolder = folders.find(f => f.id === deletingFolderId)
-  const deletingLabel = labels.find(l => l.id === deletingLabelId)
 
   return (
     <div className="flex flex-col h-full select-none">
@@ -162,30 +136,6 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* ── Priority ── */}
-        <div className="border-t pt-2">
-          <span className="text-sm font-semibold text-muted-foreground px-2 mb-1 block">Priority</span>
-          <div className="flex gap-1 px-2">
-            {([
-              { id: 'urgent',    color: '#f87171', title: 'Urgent' },
-              { id: 'important', color: '#fb923c', title: 'Important' },
-              { id: 'normal',    color: '#9ca3af', title: 'Normal' },
-            ] as const).map(p => (
-              <button
-                key={p.id}
-                onClick={() => goTo('priority', p.id)}
-                className={cn(
-                  'flex-1 flex items-center justify-center py-2 rounded-md transition-colors hover:bg-accent',
-                  selectedView === 'priority' && selectedPriorityId === p.id && 'bg-accent',
-                )}
-                title={p.title}
-              >
-                <Flag size={16} style={{ color: p.color }} />
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ── Folders ── */}
         <div className="border-t pt-2 space-y-0.5">
           <div className="flex items-center justify-between px-2 mb-1">
@@ -205,7 +155,7 @@ export function Sidebar() {
             <InlineCreate
               placeholder="Folder name"
               onSave={async (name) => {
-                await addFolder({ name, color: LABEL_COLOR_PRESETS[1], sort_order: folders.length })
+                await addFolder({ name, color: '#f97316', sort_order: folders.length })
                 setCreatingFolder(false)
               }}
               onCancel={() => setCreatingFolder(false)}
@@ -278,82 +228,6 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* ── Labels ── */}
-        <div className="border-t pt-2 space-y-0.5">
-          <div className="flex items-center justify-between px-2 mb-1">
-            <span className="text-sm font-semibold text-muted-foreground">
-              Labels
-            </span>
-            <button
-              onClick={() => { setCreatingLabel(true); setNewLabelColor(LABEL_COLOR_PRESETS[5]) }}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title="New label"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-
-          {creatingLabel && (
-            <InlineCreate
-              placeholder="Label name"
-              colorPicker
-              color={newLabelColor}
-              onColorChange={setNewLabelColor}
-              onSave={async (name) => {
-                await addLabel({ name, color: newLabelColor })
-                setCreatingLabel(false)
-              }}
-              onCancel={() => setCreatingLabel(false)}
-            />
-          )}
-
-          {labels.map(label => (
-            <div key={label.id}>
-              {renamingLabelId === label.id ? (
-                <InlineRename
-                  initialName={label.name}
-                  onSave={async (name) => {
-                    await renameLabel(label.id, name)
-                    setRenamingLabelId(null)
-                  }}
-                  onCancel={() => setRenamingLabelId(null)}
-                />
-              ) : (
-                <div
-                  onClick={() => goTo('label', label.id)}
-                  className={cn(
-                    'group flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
-                    selectedView === 'label' && selectedLabelId === label.id && 'bg-accent font-medium',
-                  )}
-                >
-                  <Tag size={14} className="flex-shrink-0" style={{ color: label.color }} />
-                  <span className="flex-1 truncate" style={{ color: label.color }}>{label.name}</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-                      >
-                        <MoreHorizontal size={16} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36">
-                      <DropdownMenuItem onClick={() => setRenamingLabelId(label.id)}>
-                        <Pencil size={14} className="mr-2" /> Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setDeletingLabelId(label.id)}
-                      >
-                        <Trash2 size={14} className="mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Footer: sync status + button */}
@@ -384,20 +258,6 @@ export function Sidebar() {
           setDeletingFolderId(null)
         }}
         onCancel={() => setDeletingFolderId(null)}
-      />
-      <ConfirmDialog
-        open={deletingLabelId !== null}
-        title={`Delete label "${deletingLabel?.name}"?`}
-        description="Label will be removed from all tasks."
-        confirmLabel="Delete"
-        onConfirm={async () => {
-          if (deletingLabelId) {
-            await stripLabelFromTasks(deletingLabelId)
-            await deleteLabel(deletingLabelId)
-          }
-          setDeletingLabelId(null)
-        }}
-        onCancel={() => setDeletingLabelId(null)}
       />
     </div>
   )
