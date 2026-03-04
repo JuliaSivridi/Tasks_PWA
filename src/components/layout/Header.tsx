@@ -6,16 +6,19 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
+import { useLabelsStore } from '@/store/labelsStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId } = useUIStore()
   const { folders } = useFoldersStore()
+  const { labels } = useLabelsStore()
 
   const viewTitle = selectedView === 'upcoming' ? 'Upcoming'
     : selectedView === 'all' ? 'All tasks'
     : selectedView === 'completed' ? 'Completed'
+    : selectedView === 'label' ? (labels.find(l => l.id === selectedLabelId)?.name ?? 'Label')
     : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 
   return (

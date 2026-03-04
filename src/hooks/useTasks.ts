@@ -104,6 +104,27 @@ export function useAllTasks() {
   }, [tasks])
 }
 
+// ── Label view: pending tasks filtered by label, sorted by priority → deadline ─
+export function useLabelTasks() {
+  const tasks = useTasksStore((s) => s.tasks)
+  const { selectedLabelId } = useUIStore()
+
+  return useMemo(() => {
+    if (!selectedLabelId) return []
+    return tasks
+      .filter(t => t.status === 'pending' && t.labels.split(',').filter(Boolean).includes(selectedLabelId))
+      .sort((a, b) => {
+        const pa = PRIORITY_ORDER[a.priority] ?? 2
+        const pb = PRIORITY_ORDER[b.priority] ?? 2
+        if (pa !== pb) return pa - pb
+        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
+        if (a.deadline_date) return -1
+        if (b.deadline_date) return 1
+        return a.created_at.localeCompare(b.created_at)
+      })
+  }, [tasks, selectedLabelId])
+}
+
 // ── Completed view: all completed tasks sorted by completion time desc ─────────
 export function useCompletedTasks() {
   const tasks = useTasksStore((s) => s.tasks)

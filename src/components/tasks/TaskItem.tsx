@@ -125,7 +125,10 @@ interface Props {
 }
 
 export function TaskItem({ task, depth, showFolder = false, hideChildren = false }: Props) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(() => {
+    const stored = localStorage.getItem(`expand-${task.id}`)
+    return stored !== 'false'
+  })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [addChildOpen, setAddChildOpen] = useState(false)
@@ -177,7 +180,12 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
           {/* Expand/collapse */}
           {!hideChildren && children.length > 0 ? (
             <button
-              onClick={() => setExpanded(!expanded)}
+              onClick={() => {
+                const next = !expanded
+                setExpanded(next)
+                if (!next) localStorage.setItem(`expand-${task.id}`, 'false')
+                else localStorage.removeItem(`expand-${task.id}`)
+              }}
               className="text-muted-foreground hover:text-foreground flex-shrink-0 p-0.5"
             >
               {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}

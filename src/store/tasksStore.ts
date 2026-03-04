@@ -48,6 +48,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     await db.tasks.put(task)
     await enqueue('task', 'create', task.id, task as unknown as Record<string, unknown>)
     set((s) => ({ tasks: [...s.tasks, task] }))
+    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
     return task
   },
 
@@ -58,6 +59,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     await db.tasks.put(updated)
     await enqueue('task', 'update', id, updated as unknown as Record<string, unknown>)
     set((s) => ({ tasks: s.tasks.map(t => t.id === id ? updated : t) }))
+    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
   completeTask: async (id) => {

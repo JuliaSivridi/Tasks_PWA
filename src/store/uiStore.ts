@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 
-export type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed'
+export type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'completed'
 
 interface UIState {
   selectedView: SelectedView
   selectedFolderId: string | null
+  selectedLabelId: string | null
   sidebarOpen: boolean
   createTaskOpen: boolean
   setView: (view: SelectedView, id?: string) => void
@@ -15,12 +16,14 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   selectedView: 'upcoming',
   selectedFolderId: null,
+  selectedLabelId: null,
   sidebarOpen: false,
   createTaskOpen: false,
 
   setView: (view, id) => set({
     selectedView: view,
     selectedFolderId: view === 'folder' ? (id ?? null) : null,
+    selectedLabelId: view === 'label' ? (id ?? null) : null,
   }),
 
   setSidebarOpen: (v) => set({ sidebarOpen: v }),

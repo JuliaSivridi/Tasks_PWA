@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
@@ -11,9 +11,10 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
+import { format, startOfWeek, addDays } from 'date-fns'
 import { TaskItem } from './TaskItem'
 import { TaskCreateModal } from './TaskCreateModal'
-import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, useAllTasks } from '@/hooks/useTasks'
+import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, useAllTasks, useLabelTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
@@ -40,11 +41,11 @@ function SortableTaskRow({ task, showFolder }: { task: Task; showFolder: boolean
       }}
       className="flex items-stretch"
     >
-      {/* Drag handle */}
+      {/* Drag handle — desktop only */}
       <button
         {...attributes}
         {...listeners}
-        className="flex items-center px-1 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
+        className="hidden md:flex items-center px-1 text-muted-foreground/30 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none"
         tabIndex={-1}
       >
         <GripVertical size={14} />
@@ -117,6 +118,96 @@ function UpcomingFilters({
   )
 }
 
+// ── Week navigation strip ─────────────────────────────────────────────────────
+
+function WeekStrip({
+  weekOffset,
+  setWeekOffset,
+  activeDate,
+  datesWithTasks,
+  onDayClick,
+}: {
+  weekOffset: number
+  setWeekOffset: Dispatch<SetStateAction<number>>
+  activeDate: string | null
+  datesWithTasks: Set<string>
+  onDayClick: (dateStr: string) => void
+}) {
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+
+  const weekDays = useMemo(() => {
+    const startOfCurrentWeek = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const startDate = addDays(startOfCurrentWeek, weekOffset * 7)
+    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i))
+  }, [weekOffset])
+
+  return (
+    <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-background">
+      <button
+        onClick={() => setWeekOffset(o => o - 1)}
+        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+      >
+        <ChevronLeft size={14} />
+      </button>
+
+      <div className="flex flex-1 gap-0.5">
+        {weekDays.map(day => {
+          const dateStr = format(day, 'yyyy-MM-dd')
+          const isToday = dateStr === todayStr
+          const isActive = activeDate === dateStr
+          const hasTasks = datesWithTasks.has(dateStr)
+          return (
+            <button
+              key={dateStr}
+              onClick={() => onDayClick(dateStr)}
+              className={cn(
+                'flex-1 flex flex-col items-center py-1 rounded transition-colors',
+                isActive ? 'bg-accent' : 'hover:bg-accent/50',
+              )}
+            >
+              <span className={cn(
+                'text-xs font-medium leading-tight',
+                isToday ? 'text-emerald-500' : isActive ? 'text-foreground' : 'text-muted-foreground',
+              )}>
+                {format(day, 'd')}
+              </span>
+              <span className={cn(
+                'text-[10px] leading-tight',
+                isToday ? 'text-emerald-500' : 'text-muted-foreground/70',
+              )}>
+                {format(day, 'EEEEE')}
+              </span>
+              <span className={cn(
+                'w-1 h-1 rounded-full mt-0.5',
+                hasTasks
+                  ? isToday ? 'bg-emerald-500' : 'bg-muted-foreground/50'
+                  : 'bg-transparent',
+              )} />
+            </button>
+          )
+        })}
+      </div>
+
+      <button
+        onClick={() => setWeekOffset(0)}
+        className={cn(
+          'text-[11px] px-1.5 py-0.5 rounded border flex-shrink-0 transition-colors',
+          weekOffset === 0 ? 'border-primary text-primary' : 'border-border text-muted-foreground hover:bg-accent',
+        )}
+      >
+        Today
+      </button>
+
+      <button
+        onClick={() => setWeekOffset(o => o + 1)}
+        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
+
 // ── Upcoming view ─────────────────────────────────────────────────────────────
 
 function UpcomingView() {
@@ -124,6 +215,9 @@ function UpcomingView() {
   const { setCreateTaskOpen } = useUIStore()
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [labelFilter, setLabelFilter] = useState<string | null>(null)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [activeDate, setActiveDate] = useState<string | null>(() => format(new Date(), 'yyyy-MM-dd'))
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const filtered = groups
     .map(g => ({
@@ -136,8 +230,70 @@ function UpcomingView() {
     }))
     .filter(g => g.tasks.length > 0)
 
+  // Set of date keys that have tasks (for dot indicator)
+  const datesWithTasks = useMemo(() => {
+    return new Set(groups.filter(g => !g.isOverdue).map(g => g.key))
+  }, [groups])
+
+  // Scroll to a date group
+  const scrollToDate = useCallback((dateStr: string) => {
+    if (!scrollRef.current) return
+    const el = scrollRef.current.querySelector<HTMLElement>(`[data-date="${dateStr}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [])
+
+  const handleDayClick = useCallback((dateStr: string) => {
+    scrollToDate(dateStr)
+    setActiveDate(dateStr)
+  }, [scrollToDate])
+
+  const handleTodayClick = useCallback(() => {
+    setWeekOffset(0)
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    scrollToDate(todayStr)
+    setActiveDate(todayStr)
+  }, [scrollToDate])
+
+  // IntersectionObserver to track which date group is at the top
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const intersecting = entries
+          .filter(e => e.isIntersecting && e.target.getAttribute('data-date'))
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (intersecting.length > 0) {
+          const date = intersecting[0].target.getAttribute('data-date')
+          if (date) setActiveDate(date)
+        }
+      },
+      { root: container, rootMargin: '-5% 0px -85% 0px', threshold: 0 },
+    )
+
+    const elements = container.querySelectorAll('[data-date]')
+    elements.forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [filtered])
+
   return (
     <div className="flex flex-col h-full">
+      <WeekStrip
+        weekOffset={weekOffset}
+        setWeekOffset={setWeekOffset}
+        activeDate={activeDate}
+        datesWithTasks={datesWithTasks}
+        onDayClick={(d) => {
+          if (d === format(new Date(), 'yyyy-MM-dd')) {
+            handleTodayClick()
+          } else {
+            handleDayClick(d)
+          }
+        }}
+      />
       <UpcomingFilters
         priorityFilter={priorityFilter}
         setPriorityFilter={setPriorityFilter}
@@ -153,9 +309,9 @@ function UpcomingView() {
           </Button>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-2 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-2 space-y-4">
           {filtered.map(group => (
-            <div key={group.key}>
+            <div key={group.key} data-date={group.isOverdue ? undefined : group.key}>
               <div className={cn(
                 'px-2 py-1 text-sm font-semibold mb-1',
                 group.isOverdue ? 'text-red-400'
@@ -287,6 +443,56 @@ function AllTasksView() {
   )
 }
 
+// ── Label view ────────────────────────────────────────────────────────────────
+
+function LabelView() {
+  const labelTasks = useLabelTasks()
+  const { setCreateTaskOpen } = useUIStore()
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
+
+  const filtered = labelTasks.filter(t => {
+    if (priorityFilter && t.priority !== priorityFilter) return false
+    return true
+  })
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b">
+        <div className="flex items-center gap-1">
+          {PRIORITY_OPTS.map(p => (
+            <button
+              key={p.id}
+              onClick={() => setPriorityFilter(priorityFilter === p.id ? null : p.id)}
+              className={cn(
+                'p-1.5 rounded transition-colors hover:bg-accent',
+                priorityFilter === p.id && 'bg-accent',
+              )}
+              title={p.title}
+            >
+              <Flag size={14} style={{ color: p.color }} />
+            </button>
+          ))}
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
+          <FolderOpen size={40} className="opacity-20" />
+          <p>No tasks</p>
+          <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
+            <Plus size={16} className="mr-1" /> Add task
+          </Button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-2">
+          {filtered.map(task => (
+            <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Completed view ────────────────────────────────────────────────────────────
 
 function CompletedView() {
@@ -359,6 +565,7 @@ export function TaskList() {
   const renderContent = () => {
     if (selectedView === 'upcoming') return <UpcomingView />
     if (selectedView === 'all') return <AllTasksView />
+    if (selectedView === 'label') return <LabelView />
     if (selectedView === 'completed') return <CompletedView />
     return <FolderView />
   }

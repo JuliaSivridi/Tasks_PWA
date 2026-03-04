@@ -28,6 +28,7 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
     await db.folders.put(folder)
     await enqueue('folder', 'create', folder.id, folder as unknown as Record<string, unknown>)
     set((s) => ({ folders: [...s.folders, folder] }))
+    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
     return folder
   },
 
@@ -38,12 +39,14 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
     await db.folders.put(updated)
     await enqueue('folder', 'update', id, updated as unknown as Record<string, unknown>)
     set((s) => ({ folders: s.folders.map(f => f.id === id ? updated : f) }))
+    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
   deleteFolder: async (id) => {
     await db.folders.delete(id)
     await enqueue('folder', 'delete', id, { id })
     set((s) => ({ folders: s.folders.filter(f => f.id !== id) }))
+    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
   upsertMany: async (folders) => {
