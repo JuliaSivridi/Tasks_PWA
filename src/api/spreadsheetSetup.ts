@@ -35,6 +35,7 @@ export async function ensureSpreadsheet(): Promise<void> {
         { properties: { title: 'tasks' } },
         { properties: { title: 'folders' } },
         { properties: { title: 'labels' } },
+        { properties: { title: 'settings' } },
       ],
     }),
   })

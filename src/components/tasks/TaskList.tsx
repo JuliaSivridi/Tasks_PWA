@@ -14,7 +14,7 @@ import { GripVertical } from 'lucide-react'
 import { format, startOfWeek, addDays, parseISO } from 'date-fns'
 import { TaskItem } from './TaskItem'
 import { TaskCreateModal } from './TaskCreateModal'
-import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, useAllTasks, useLabelTasks } from '@/hooks/useTasks'
+import { useUpcomingGroups, useFilteredRootTasks, useCompletedTasks, useAllTasks, useLabelTasks, usePriorityTasks } from '@/hooks/useTasks'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
@@ -530,6 +530,33 @@ function LabelView() {
   )
 }
 
+// ── Priority view ─────────────────────────────────────────────────────────────
+
+function PriorityView() {
+  const priorityTasks = usePriorityTasks()
+  const { setCreateTaskOpen } = useUIStore()
+
+  return (
+    <div className="flex flex-col h-full">
+      {priorityTasks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
+          <FolderOpen size={40} className="opacity-20" />
+          <p>No tasks</p>
+          <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
+            <Plus size={16} className="mr-1" /> Add task
+          </Button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-2">
+          {priorityTasks.map(task => (
+            <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Completed view ────────────────────────────────────────────────────────────
 
 function CompletedView() {
@@ -603,6 +630,7 @@ export function TaskList() {
     if (selectedView === 'upcoming') return <UpcomingView />
     if (selectedView === 'all') return <AllTasksView />
     if (selectedView === 'label') return <LabelView />
+    if (selectedView === 'priority') return <PriorityView />
     if (selectedView === 'completed') return <CompletedView />
     return <FolderView />
   }

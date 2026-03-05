@@ -11,14 +11,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority } = useUIStore()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
+
+  const PRIORITY_LABELS: Record<string, string> = { urgent: 'Urgent', important: 'Important', normal: 'Normal' }
 
   const viewTitle = selectedView === 'upcoming' ? 'Upcoming'
     : selectedView === 'all' ? 'All tasks'
     : selectedView === 'completed' ? 'Completed'
     : selectedView === 'label' ? (labels.find(l => l.id === selectedLabelId)?.name ?? 'Label')
+    : selectedView === 'priority' ? (PRIORITY_LABELS[selectedPriority ?? ''] ?? 'Priority')
     : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 
   return (

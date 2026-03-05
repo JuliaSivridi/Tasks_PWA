@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
 import { initialLoad } from '@/services/syncService'
 import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
+import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
   const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -16,6 +17,7 @@ export function AppShell() {
     const setup = async () => {
       await ensureSpreadsheet()
       await initialLoad()
+      await usePrefsStore.getState().load()
     }
     void setup()
   }, [])

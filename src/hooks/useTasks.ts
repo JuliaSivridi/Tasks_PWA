@@ -125,6 +125,24 @@ export function useLabelTasks() {
   }, [tasks, selectedLabelId])
 }
 
+// ── Priority view: pending tasks filtered by priority, sorted by deadline ─────
+export function usePriorityTasks() {
+  const tasks = useTasksStore((s) => s.tasks)
+  const { selectedPriority } = useUIStore()
+
+  return useMemo(() => {
+    if (!selectedPriority) return []
+    return tasks
+      .filter(t => t.status === 'pending' && t.priority === selectedPriority)
+      .sort((a, b) => {
+        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
+        if (a.deadline_date) return -1
+        if (b.deadline_date) return 1
+        return a.created_at.localeCompare(b.created_at)
+      })
+  }, [tasks, selectedPriority])
+}
+
 // ── Completed view: all completed tasks sorted by completion time desc ─────────
 export function useCompletedTasks() {
   const tasks = useTasksStore((s) => s.tasks)
