@@ -1,6 +1,9 @@
 import { useAuthStore, setTokenClient, resolveTokenRequest, rejectTokenRequest } from '@/store/authStore'
 
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+const SCOPES = [
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+].join(' ')
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
 declare global {

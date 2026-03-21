@@ -41,7 +41,7 @@ A personal task manager built as a **Progressive Web App**. Runs in any browser 
 ### Prerequisites
 
 - Google account
-- Google Cloud project with **Google Sheets API v4** enabled
+- Google Cloud project with **Google Sheets API v4** and **Google Drive API v3** enabled
 - OAuth 2.0 Client ID (type: Web application)
 - Node.js ≥ 18
 
@@ -49,13 +49,14 @@ A personal task manager built as a **Progressive Web App**. Runs in any browser 
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Enable **Google Sheets API v4**
-3. Create an **OAuth 2.0 Client ID** → type: Web application
-4. Add to **Authorized JavaScript origins** (not Redirect URIs):
+3. Enable **Google Drive API**
+4. Create an **OAuth 2.0 Client ID** → type: Web application
+5. Add to **Authorized JavaScript origins** (not Redirect URIs):
    ```
    http://localhost:5173
    https://your-app.vercel.app
    ```
-5. Add your Google account as a **test user** in the OAuth consent screen
+6. Add your Google account as a **test user** in the OAuth consent screen
 
 ### Local Development
 
@@ -68,7 +69,6 @@ npm install
 Create `.env` in the project root:
 ```
 VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-VITE_SPREADSHEET_ID=your-spreadsheet-id   # optional: the app creates one automatically
 ```
 
 ```bash
@@ -81,7 +81,6 @@ npm run build  # production build
 1. Import the repository at [vercel.com](https://vercel.com)
 2. Add environment variables in project Settings → Environment Variables:
    - `VITE_GOOGLE_CLIENT_ID`
-   - `VITE_SPREADSHEET_ID`
 3. Every push to `main` triggers automatic deployment
 
 ## Data Model

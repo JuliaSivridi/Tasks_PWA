@@ -30,9 +30,7 @@ export async function sheetsRequest<T>(
   body?: unknown,
 ): Promise<T> {
   const token = await getToken()
-  const spreadsheetId =
-    useAuthStore.getState().spreadsheetId ||
-    (import.meta.env.VITE_SPREADSHEET_ID as string)
+  const spreadsheetId = useAuthStore.getState().spreadsheetId
 
   const url = `${BASE}/${spreadsheetId}/${path}`
   const res = await fetch(url, {
