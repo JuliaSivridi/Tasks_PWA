@@ -1,6 +1,8 @@
 import { useAuthStore, setTokenClient, resolveTokenRequest, rejectTokenRequest } from '@/store/authStore'
 
 const SCOPES = [
+  'email',
+  'profile',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
 ].join(' ')
