@@ -1,11 +1,15 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
   <rect width='512' height='512' rx='80' fill='#e07e38'/>
-  <rect x='130' y='170' width='190' height='22' rx='11' fill='white'/>
-  <rect x='130' y='215' width='155' height='22' rx='11' fill='white' opacity='0.75'/>
-  <rect x='130' y='260' width='170' height='22' rx='11' fill='white' opacity='0.75'/>
-  <rect x='130' y='305' width='140' height='22' rx='11' fill='white' opacity='0.55'/>
-  <rect x='345' y='164' width='32' height='32' rx='16' fill='white'/>
-  <rect x='345' y='209' width='32' height='32' rx='16' fill='white' opacity='0.5'/>
-  <rect x='345' y='254' width='32' height='32' rx='16' fill='white' opacity='0.5'/>
-  <rect x='345' y='299' width='32' height='32' rx='16' fill='white' opacity='0.35'/>
+  <!-- ListTodo lucide icon, scale=8, centered in 512x512 -->
+  <g transform='translate(160, 160) scale(8)'
+     fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
+    <!-- unchecked box (top row) -->
+    <rect x='3' y='5' width='6' height='6' rx='1'/>
+    <!-- checkmark (bottom row) -->
+    <path d='m3 17 2 2 4-4'/>
+    <!-- text lines -->
+    <path d='M13 6h8'/>
+    <path d='M13 12h8'/>
+    <path d='M13 18h8'/>
+  </g>
 </svg>
