@@ -75,8 +75,22 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
 
   completeTask: async (id) => {
-    const { updateTask } = get()
-    await updateTask(id, { status: 'completed', completed_at: now() })
+    const { updateTask, tasks } = get()
+    // Collect the task itself + all pending descendants recursively
+    const toComplete: string[] = [id]
+    const collect = (parentId: string) => {
+      for (const t of tasks) {
+        if (t.parent_id === parentId && t.status === 'pending') {
+          toComplete.push(t.id)
+          collect(t.id)
+        }
+      }
+    }
+    collect(id)
+    const completedAt = now()
+    for (const taskId of toComplete) {
+      await updateTask(taskId, { status: 'completed', completed_at: completedAt })
+    }
     // Flush immediately — don't rely on the 800 ms debounce so the change
     // reaches Sheets before the user closes the app or switches device.
     void import('@/services/syncService').then(({ flush }) => { void flush() })

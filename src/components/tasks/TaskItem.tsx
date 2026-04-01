@@ -394,7 +394,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
                 </span>
               ) : null
             })}
-            {folder && showFolder && folder.id !== INBOX_FOLDER_ID && (
+            {folder && showFolder && (
               <span className="text-muted-foreground">{folder.name}</span>
             )}
             {totalChildCount > 0 && (
