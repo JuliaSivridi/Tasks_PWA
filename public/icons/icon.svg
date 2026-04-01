@@ -1,20 +1,18 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
   <rect width='512' height='512' rx='80' fill='#e07e38'/>
   <!--
-    Content grid: 4 rows at y=4,12,20,28 (spacing=8 units each)
-    Left col (box/check): x=2..8 (6 units wide, matches row height)
-    Right col (lines):    x=11..22 (11 units wide)
-    Visual bounds with stroke: x=1..23, y=0..29  →  22×29 units
-    Scale=12: 264×348 px  →  margins: (512-264)/2=124 h, (512-348)/2=82 v
-    translate(112, 82): left=112+1×12=124 ✓  top=82+0×12=82 ✓
+    User's elements (scale=12), translate adjusted for equal margins:
+    visual bounds x=2..31, y=4..27  →  348×276 px
+    center: tx + 16.5×12 = 256 → tx=58,  ty + 15.5×12 = 256 → ty=70
+    left=right=82px,  top=bottom=118px
   -->
-  <g transform='translate(112, 82) scale(12)'
+  <g transform='translate(58, 70) scale(12)'
      fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
-    <rect x='2' y='1' width='6' height='6' rx='1'/>
-    <path d='m2 25 2 3 4-4'/>
-    <path d='M11 4h11'/>
-    <path d='M11 12h11'/>
-    <path d='M11 20h11'/>
-    <path d='M11 28h9'/>
+    <rect x='3' y='5' width='10' height='10' rx='1'/>
+    <path d='m3 23 3 3 7-7'/>
+    <path d='M18 6h12'/>
+    <path d='M18 12h12'/>
+    <path d='M18 18h12'/>
+    <path d='M18 24h12'/>
   </g>
 </svg>
