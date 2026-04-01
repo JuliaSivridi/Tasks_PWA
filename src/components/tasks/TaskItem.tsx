@@ -14,7 +14,7 @@ import { useLabelsStore } from '@/store/labelsStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { getNextDueDate } from '@/services/recurrenceService'
 import { getDeadlineStatus, formatTaskDeadlineLabel } from '@/utils/dateUtils'
-import { INBOX_FOLDER_ID } from '@/utils/constants'
+
 import { cn } from '@/lib/utils'
 import type { Task, Priority } from '@/types/task'
 
