@@ -85,7 +85,7 @@ npm run build  # production build
 
 ## Data Model
 
-Data is stored in a Google Spreadsheet with four sheets:
+All data lives in the user's **db_tasks** Google Spreadsheet (found or created automatically on first login). It contains four sheets:
 
 | Sheet | Columns |
 |---|---|

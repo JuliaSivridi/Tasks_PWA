@@ -355,7 +355,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <h1 id="data-model">4. Data Model</h1>
 
-<p>The Google Spreadsheet contains four sheets:</p>
+<p>All data lives in the user's Google Spreadsheet named <strong>db_tasks</strong> (found or auto-created on first login). It contains four sheets:</p>
 
 <h2>tasks (columns A–Q)</h2>
 <table>
@@ -586,8 +586,7 @@ cd Tasks
 npm install</code></pre>
 
 <p>Create <code>.env</code> in the project root:</p>
-<pre><code>VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-VITE_SPREADSHEET_ID=your-spreadsheet-id   # optional: app creates one automatically</code></pre>
+<pre><code>VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com</code></pre>
 
 <pre><code>npm run dev    # http://localhost:5173
 npm run build  # production build → dist/</code></pre>
@@ -595,8 +594,8 @@ npm run build  # production build → dist/</code></pre>
 <h2>Vercel Deployment</h2>
 <ol>
   <li>Import the repository at <strong>vercel.com</strong></li>
-  <li>Add environment variables in Settings → Environment Variables:<br>
-      <code>VITE_GOOGLE_CLIENT_ID</code> and <code>VITE_SPREADSHEET_ID</code></li>
+  <li>Add environment variable in Settings → Environment Variables:<br>
+      <code>VITE_GOOGLE_CLIENT_ID</code></li>
   <li>Every push to <code>main</code> triggers automatic deployment</li>
 </ol>
 
