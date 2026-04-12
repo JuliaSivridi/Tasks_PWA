@@ -52,7 +52,13 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
   }
 
   const handleClearAll = async () => {
-    await updateTask(task.id, { deadline_date: '', deadline_time: '' })
+    await updateTask(task.id, {
+      deadline_date: '', deadline_time: '',
+      is_recurring: false, recur_type: '',
+    })
+    setIsRecurring(false)
+    setRecurType('days')
+    setRecurValue(1)
     onClose()
   }
 

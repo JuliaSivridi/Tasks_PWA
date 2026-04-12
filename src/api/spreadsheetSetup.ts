@@ -2,10 +2,10 @@ import { useAuthStore } from '@/store/authStore'
 
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets'
 const DRIVE_BASE = 'https://www.googleapis.com/drive/v3'
-const SPREADSHEET_TITLE = 'Tasks'
+const SPREADSHEET_TITLE = 'db_tasks'
 
 /**
- * Ensures a spreadsheet named "Tasks" exists in the user's Google Drive.
+ * Ensures a spreadsheet named "db_tasks" exists in the user's Google Drive.
  * Priority: authStore.spreadsheetId (localStorage) > Drive search > create new.
  * The found/created spreadsheet ID is saved to authStore (persisted in localStorage).
  */
