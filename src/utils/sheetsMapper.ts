@@ -73,21 +73,23 @@ export function folderToRow(folder: Folder): string[] {
   return row
 }
 
-// ─── Label (id | name | color) ───────────────────────────────────────────────
+// ─── Label (id | name | color | sort_order) ──────────────────────────────────
 
 export function rowToLabel(row: string[]): Label {
   return {
-    id:    cell(row, LABEL_COL.ID),
-    name:  cell(row, LABEL_COL.NAME),
-    color: cell(row, LABEL_COL.COLOR),
+    id:         cell(row, LABEL_COL.ID),
+    name:       cell(row, LABEL_COL.NAME),
+    color:      cell(row, LABEL_COL.COLOR),
+    sort_order: Number(cell(row, LABEL_COL.SORT_ORDER)) || 0,
   }
 }
 
 export function labelToRow(label: Label): string[] {
-  const row = new Array(3).fill('')
-  row[LABEL_COL.ID]    = label.id
-  row[LABEL_COL.NAME]  = label.name
-  row[LABEL_COL.COLOR] = label.color
+  const row = new Array(4).fill('')
+  row[LABEL_COL.ID]         = label.id
+  row[LABEL_COL.NAME]       = label.name
+  row[LABEL_COL.COLOR]      = label.color
+  row[LABEL_COL.SORT_ORDER] = String(label.sort_order)
   return row
 }
 

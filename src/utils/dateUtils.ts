@@ -64,13 +64,10 @@ export function formatDeadline(deadlineDate: string, deadlineTime: string): stri
 
 export function formatDayGroupLabel(dateStr: string): string {
   const date = parseISO(dateStr)
-  if (isToday(date)) {
-    return `${format(date, 'MMM d')} · Today · ${format(date, 'EEEE')}`
-  }
-  if (isTomorrow(date)) {
-    return `${format(date, 'MMM d')} · Tomorrow · ${format(date, 'EEEE')}`
-  }
-  return `${format(date, 'MMM d')} · ${format(date, 'EEEE')}`
+  const base = `${format(date, 'd MMM')} · ${format(date, 'EEEE')}`
+  if (isToday(date)) return `${base} · Today`
+  if (isTomorrow(date)) return `${base} · Tomorrow`
+  return base
 }
 
 export function formatCompletedAt(completedAt: string): string {

@@ -19,7 +19,7 @@ export const useLabelsStore = create<LabelsState>((set, get) => ({
 
   loadFromDb: async () => {
     const labels = await db.labels.toArray()
-    set({ labels })
+    set({ labels: labels.slice().sort((a, b) => a.sort_order - b.sort_order) })
   },
 
   addLabel: async (input) => {
@@ -60,6 +60,6 @@ export const useLabelsStore = create<LabelsState>((set, get) => ({
 
   upsertMany: async (labels) => {
     await db.labels.bulkPut(labels)
-    set({ labels })
+    set({ labels: labels.slice().sort((a, b) => a.sort_order - b.sort_order) })
   },
 }))

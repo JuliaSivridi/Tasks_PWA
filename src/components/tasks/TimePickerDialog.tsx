@@ -88,25 +88,22 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
             </div>
           </div>
 
-          {/* Recurrence */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="tp-recurring"
-                checked={isRecurring}
-                onCheckedChange={(v) => setIsRecurring(v === true)}
-              />
-              <Label htmlFor="tp-recurring" className="cursor-pointer">Recurring task</Label>
-            </div>
-
+          {/* Recurrence — inline: [ ] Repeat  every [N] [type] */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="tp-recurring"
+              checked={isRecurring}
+              onCheckedChange={(v) => setIsRecurring(v === true)}
+            />
+            <label htmlFor="tp-recurring" className="cursor-pointer text-sm text-foreground select-none">Repeat</label>
             {isRecurring && (
-              <div className="flex items-center gap-2 ml-6">
-                <span className="text-muted-foreground text-sm">Every</span>
+              <>
+                <span className="text-muted-foreground text-sm">every</span>
                 <Input
                   type="number"
                   min={1}
                   max={365}
-                  className="w-16"
+                  className="w-16 h-8 text-sm"
                   value={recurValue}
                   onChange={(e) => setRecurValue(Number(e.target.value))}
                 />
@@ -114,14 +111,14 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
                   value={recurType}
                   onValueChange={(v) => setRecurType(v as 'days' | 'weeks' | 'months')}
                 >
-                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28 h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="days">days</SelectItem>
                     <SelectItem value="weeks">weeks</SelectItem>
                     <SelectItem value="months">months</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -130,7 +127,7 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
           <div className="flex gap-1">
             {date && (
               <Button variant="ghost" size="sm" onClick={() => void handleClearAll()}>
-                No date
+                Clear
               </Button>
             )}
             {task.is_recurring && task.deadline_date && (

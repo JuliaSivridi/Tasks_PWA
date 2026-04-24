@@ -32,17 +32,18 @@ export const FOLDER_COL = {
   SORT_ORDER: 3,
 } as const
 
-// Label columns: id | name | color
+// Label columns: id | name | color | sort_order
 export const LABEL_COL = {
   ID: 0,
   NAME: 1,
   COLOR: 2,
+  SORT_ORDER: 3,
 } as const
 
 // Sheet ranges
 export const TASK_RANGE = `${SHEET_TASKS}!A:Q`
 export const FOLDER_RANGE = `${SHEET_FOLDERS}!A:D`
-export const LABEL_RANGE = `${SHEET_LABELS}!A:C`
+export const LABEL_RANGE = `${SHEET_LABELS}!A:D`
 
 // Default label/folder colors
 export const LABEL_COLOR_PRESETS = [

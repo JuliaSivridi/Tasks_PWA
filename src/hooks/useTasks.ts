@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTasksStore } from '@/store/tasksStore'
 import { useUIStore } from '@/store/uiStore'
-import { parseISO, isBefore, startOfDay } from 'date-fns'
+import { parseISO, isBefore, startOfDay, isTomorrow } from 'date-fns'
 import { formatDayGroupLabel } from '@/utils/dateUtils'
 import { INBOX_FOLDER_ID } from '@/utils/constants'
 
@@ -38,7 +38,7 @@ export function useUpcomingGroups(): TaskGroup[] {
           label: isOver ? 'Overdue' : formatDayGroupLabel(task.deadline_date),
           isOverdue: isOver,
           isToday,
-          isTomorrow: false,
+          isTomorrow: !isOver && isTomorrow(date),
           tasks: [],
         })
       }
@@ -94,8 +94,12 @@ export function useAllTasks() {
         const pa = PRIORITY_ORDER[a.priority] ?? 2
         const pb = PRIORITY_ORDER[b.priority] ?? 2
         if (pa !== pb) return pa - pb
-        // 2. Deadline (earliest first, no deadline last)
-        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
+        // 2. Deadline (earliest first, then by time, no deadline last)
+        if (a.deadline_date && b.deadline_date) {
+          const dc = a.deadline_date.localeCompare(b.deadline_date)
+          if (dc !== 0) return dc
+          return (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99')
+        }
         if (a.deadline_date) return -1
         if (b.deadline_date) return 1
         // 3. Created at (oldest first)
@@ -117,7 +121,11 @@ export function useLabelTasks() {
         const pa = PRIORITY_ORDER[a.priority] ?? 2
         const pb = PRIORITY_ORDER[b.priority] ?? 2
         if (pa !== pb) return pa - pb
-        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
+        if (a.deadline_date && b.deadline_date) {
+          const dc = a.deadline_date.localeCompare(b.deadline_date)
+          if (dc !== 0) return dc
+          return (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99')
+        }
         if (a.deadline_date) return -1
         if (b.deadline_date) return 1
         return a.created_at.localeCompare(b.created_at)
@@ -135,7 +143,11 @@ export function usePriorityTasks() {
     return tasks
       .filter(t => t.status === 'pending' && t.priority === selectedPriority)
       .sort((a, b) => {
-        if (a.deadline_date && b.deadline_date) return a.deadline_date.localeCompare(b.deadline_date)
+        if (a.deadline_date && b.deadline_date) {
+          const dc = a.deadline_date.localeCompare(b.deadline_date)
+          if (dc !== 0) return dc
+          return (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99')
+        }
         if (a.deadline_date) return -1
         if (b.deadline_date) return 1
         return a.created_at.localeCompare(b.created_at)

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronRight, ChevronDown, Clock, Tag, Flag, Pencil, Trash2, RefreshCw, Plus, MoreHorizontal, ListChecks } from 'lucide-react'
+import { ChevronRight, ChevronDown, Clock, Tag, Flag, Pencil, Trash2, RefreshCw, Plus, MoreHorizontal, Folder, Check, Circle, List } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { TaskCreateModal } from './TaskCreateModal'
@@ -122,9 +122,11 @@ interface Props {
   depth: number
   showFolder?: boolean
   hideChildren?: boolean
+  hideDeadline?: boolean
+  hideLabels?: boolean
 }
 
-export function TaskItem({ task, depth, showFolder = false, hideChildren = false }: Props) {
+export function TaskItem({ task, depth, showFolder = false, hideChildren = false, hideDeadline = false, hideLabels = false }: Props) {
   const [expanded, setExpanded] = useState(task.is_expanded !== false)
   useEffect(() => { setExpanded(task.is_expanded !== false) }, [task.is_expanded])
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -153,7 +155,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
     : deadlineStatus === 'week' ? 'text-violet-400'
     : 'text-muted-foreground'
 
-  const hasSecondLine = task.deadline_date || labelIds.length > 0 || (folder && showFolder) || task.is_recurring || totalChildCount > 0
+  const hasSecondLine = (!hideDeadline && task.deadline_date) || (!hideLabels && labelIds.length > 0) || (folder && showFolder) || task.is_recurring || totalChildCount > 0
 
   const handleComplete = async () => {
     if (task.is_recurring && task.deadline_date) {
@@ -374,18 +376,18 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
           </div>
         </div>
 
-        {/* Row 2: recurring icon + deadline label + labels + folder */}
+        {/* Row 2: recurring icon + deadline label + labels + folder + subtask counts */}
         {hasSecondLine && (
           <div className="flex items-center gap-3 pl-[52px] pr-2 pb-2 text-sm flex-wrap">
             {task.is_recurring && (
               <RefreshCw size={12} className="text-muted-foreground opacity-60 flex-shrink-0" />
             )}
-            {task.deadline_date && (
+            {!hideDeadline && task.deadline_date && (
               <span className={cn('font-light', timeColorClass)}>
                 {formatTaskDeadlineLabel(task.deadline_date, task.deadline_time)}
               </span>
             )}
-            {labelIds.map(id => {
+            {!hideLabels && labelIds.map(id => {
               const label = labels.find(l => l.id === id)
               return label ? (
                 <span key={id} className="flex items-center gap-1" style={{ color: label.color }}>
@@ -395,12 +397,25 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
               ) : null
             })}
             {folder && showFolder && (
-              <span className="text-muted-foreground">{folder.name}</span>
+              <span className="flex items-center gap-1" style={{ color: folder.color }}>
+                <Folder size={12} />
+                {folder.name}
+              </span>
             )}
             {totalChildCount > 0 && (
-              <span className="flex items-center gap-1 text-muted-foreground/70">
-                <ListChecks size={12} />
-                {completedChildCount}/{totalChildCount}
+              <span className="flex items-center gap-2 text-muted-foreground/70">
+                <span className="flex items-center gap-0.5">
+                  <Check size={11} />
+                  {completedChildCount}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <Circle size={11} />
+                  {children.length}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <List size={11} />
+                  {totalChildCount}
+                </span>
               </span>
             )}
           </div>

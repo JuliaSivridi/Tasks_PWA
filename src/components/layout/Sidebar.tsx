@@ -195,6 +195,61 @@ export function Sidebar() {
           ))}
         </div>
 
+        {/* ── Labels ── */}
+        <div className="border-t pt-2 space-y-0.5">
+          <SectionHeader
+            label="Labels"
+            sectionKey="labels"
+            action={
+              <button
+                onClick={() => setCreatingLabel(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="New label"
+              >
+                <Plus size={16} />
+              </button>
+            }
+          />
+
+          {(sectionOpen.labels ?? true) && labels.map(label => (
+            <div
+              key={label.id}
+              onClick={() => goTo('label', label.id)}
+              className={cn(
+                'group flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
+                selectedView === 'label' && selectedLabelId === label.id && 'bg-accent font-medium text-primary',
+              )}
+            >
+              <Tag size={16} className="flex-shrink-0" style={{ color: label.color }} />
+              <span className="flex-1 truncate">{label.name}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36">
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation()
+                    setEditingLabel({ id: label.id, name: label.name, color: label.color })
+                  }}>
+                    <Pencil size={14} className="mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={(e) => { e.stopPropagation(); setDeletingLabelId(label.id) }}
+                  >
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </div>
+
         {/* ── Folders ── */}
         <div className="border-t pt-2 space-y-0.5">
           <SectionHeader
@@ -272,61 +327,6 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* ── Labels ── */}
-        <div className="border-t pt-2 space-y-0.5">
-          <SectionHeader
-            label="Labels"
-            sectionKey="labels"
-            action={
-              <button
-                onClick={() => setCreatingLabel(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="New label"
-              >
-                <Plus size={16} />
-              </button>
-            }
-          />
-
-          {(sectionOpen.labels ?? true) && labels.map(label => (
-            <div
-              key={label.id}
-              onClick={() => goTo('label', label.id)}
-              className={cn(
-                'group flex items-center gap-1.5 px-2 py-2 rounded-md text-base cursor-pointer transition-colors hover:bg-accent',
-                selectedView === 'label' && selectedLabelId === label.id && 'bg-accent font-medium text-primary',
-              )}
-            >
-              <Tag size={16} className="flex-shrink-0" style={{ color: label.color }} />
-              <span className="flex-1 truncate">{label.name}</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-36">
-                  <DropdownMenuItem onClick={(e) => {
-                    e.stopPropagation()
-                    setEditingLabel({ id: label.id, name: label.name, color: label.color })
-                  }}>
-                    <Pencil size={14} className="mr-2" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={(e) => { e.stopPropagation(); setDeletingLabelId(label.id) }}
-                  >
-                    <Trash2 size={14} className="mr-2" /> Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
-        </div>
-
       </div>
 
       {/* Footer: sync status + button */}
@@ -373,7 +373,7 @@ export function Sidebar() {
         open={creatingLabel}
         title="New label"
         onSave={async (name, color) => {
-          await addLabel({ name, color })
+          await addLabel({ name, color, sort_order: labels.length })
           setCreatingLabel(false)
         }}
         onCancel={() => setCreatingLabel(false)}

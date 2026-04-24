@@ -4,7 +4,7 @@ import { labelToRow, parseLabelRows } from '@/utils/sheetsMapper'
 import type { Label } from '@/types/label'
 import type { SheetsGetResponse } from '@/types/sheets'
 
-const HEADER = ['id', 'name', 'color']
+const HEADER = ['id', 'name', 'color', 'sort_order']
 
 export async function fetchAllLabels(): Promise<Label[]> {
   const data = await sheetsRequest<SheetsGetResponse>('GET', `values/${LABEL_RANGE}`)
@@ -21,17 +21,17 @@ export async function appendLabel(label: Label): Promise<void> {
 export async function updateLabel(label: Label): Promise<void> {
   const rowNum = await findRowIndex(SHEET_LABELS, label.id)
   if (!rowNum) { await appendLabel(label); return }
-  const range = `${SHEET_LABELS}!A${rowNum}:C${rowNum}`
+  const range = `${SHEET_LABELS}!A${rowNum}:D${rowNum}`
   await sheetsRequest('PUT', `values/${range}?valueInputOption=RAW`, {
     range, majorDimension: 'ROWS', values: [labelToRow(label)],
   })
 }
 
 export async function ensureLabelHeader(): Promise<void> {
-  const data = await sheetsRequest<SheetsGetResponse>('GET', `values/${SHEET_LABELS}!A1:C1`)
+  const data = await sheetsRequest<SheetsGetResponse>('GET', `values/${SHEET_LABELS}!A1:D1`)
   if (!data.values || data.values.length === 0) {
-    await sheetsRequest('PUT', `values/${SHEET_LABELS}!A1:C1?valueInputOption=RAW`, {
-      range: `${SHEET_LABELS}!A1:C1`, majorDimension: 'ROWS', values: [HEADER],
+    await sheetsRequest('PUT', `values/${SHEET_LABELS}!A1:D1?valueInputOption=RAW`, {
+      range: `${SHEET_LABELS}!A1:D1`, majorDimension: 'ROWS', values: [HEADER],
     })
   }
 }

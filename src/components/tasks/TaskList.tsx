@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight, Calendar, Folder } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -57,7 +60,7 @@ function SortableTaskRow({ task, showFolder }: { task: Task; showFolder: boolean
   )
 }
 
-// ── Upcoming filters ──────────────────────────────────────────────────────────
+// ── Priority options (shared) ─────────────────────────────────────────────────
 
 const PRIORITY_OPTS = [
   { id: 'urgent',    color: '#f87171', title: 'Urgent' },
@@ -65,54 +68,113 @@ const PRIORITY_OPTS = [
   { id: 'normal',    color: '#9ca3af', title: 'Normal' },
 ] as const
 
-function UpcomingFilters({
+// ── Filter bar: priority / label / folder dropdown multi-select ───────────────
+
+function FilterBar({
   priorityFilter, setPriorityFilter,
   labelFilter, setLabelFilter,
+  folderFilter, setFolderFilter,
 }: {
-  priorityFilter: string | null
-  setPriorityFilter: (v: string | null) => void
-  labelFilter: string | null
-  setLabelFilter: (v: string | null) => void
+  priorityFilter: string[]
+  setPriorityFilter: (v: string[]) => void
+  labelFilter: string[]
+  setLabelFilter: (v: string[]) => void
+  folderFilter: string[]
+  setFolderFilter: (v: string[]) => void
 }) {
   const { labels } = useLabelsStore()
+  const { folders } = useFoldersStore()
+
+  const togglePriority = (id: string) =>
+    setPriorityFilter(priorityFilter.includes(id) ? priorityFilter.filter(p => p !== id) : [...priorityFilter, id])
+  const toggleLabel = (id: string) =>
+    setLabelFilter(labelFilter.includes(id) ? labelFilter.filter(l => l !== id) : [...labelFilter, id])
+  const toggleFolder = (id: string) =>
+    setFolderFilter(folderFilter.includes(id) ? folderFilter.filter(f => f !== id) : [...folderFilter, id])
+
+  const priorityActive = priorityFilter.length > 0
+  const labelActive = labelFilter.length > 0
+  const folderActive = folderFilter.length > 0
 
   return (
-    <div className="flex items-center gap-1.5 px-3 py-1.5 border-b flex-wrap">
-      {/* Priority pills */}
-      {PRIORITY_OPTS.map(p => (
-        <button
-          key={p.id}
-          onClick={() => setPriorityFilter(priorityFilter === p.id ? null : p.id)}
-          className={cn(
-            'p-1.5 rounded transition-colors hover:bg-accent',
-            priorityFilter === p.id && 'bg-accent',
-          )}
-          title={p.title}
-        >
-          <Flag size={14} style={{ color: p.color }} />
-        </button>
-      ))}
+    <div className="flex items-center gap-1 px-3 py-1.5 border-b">
+      {/* Priority */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', priorityActive && 'bg-accent')}>
+            <Flag size={14} className={priorityActive ? 'text-foreground' : 'text-muted-foreground'} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {PRIORITY_OPTS.map(p => (
+            <DropdownMenuItem key={p.id} onSelect={(e) => { e.preventDefault(); togglePriority(p.id) }}>
+              <Flag size={14} className="mr-2" style={{ color: p.color }} />
+              {p.title}
+              {priorityFilter.includes(p.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Divider */}
-      {labels.length > 0 && <span className="w-px h-4 bg-border flex-shrink-0" />}
+      {/* Label */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn('p-1.5 rounded transition-colors hover:bg-accent', labelActive && 'bg-accent')}
+            disabled={labels.length === 0}
+          >
+            <Tag size={14} className={labelActive ? 'text-foreground' : 'text-muted-foreground'} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {labels.map(l => (
+            <DropdownMenuItem key={l.id} onSelect={(e) => { e.preventDefault(); toggleLabel(l.id) }}>
+              <Tag size={14} className="mr-2" style={{ color: l.color }} />
+              <span style={{ color: l.color }}>{l.name}</span>
+              {labelFilter.includes(l.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-      {/* Label pills */}
-      {labels.map(l => (
-        <button
-          key={l.id}
-          onClick={() => setLabelFilter(labelFilter === l.id ? null : l.id)}
-          className={cn(
-            'flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-colors hover:bg-accent',
-            labelFilter === l.id ? 'bg-accent' : 'border-border',
-          )}
-          style={labelFilter === l.id ? { borderColor: l.color } : {}}
-        >
-          <Tag size={10} style={{ color: l.color }} />
-          <span style={{ color: l.color }}>{l.name}</span>
-        </button>
-      ))}
+      {/* Folder */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn('p-1.5 rounded transition-colors hover:bg-accent', folderActive && 'bg-accent')}
+            disabled={folders.length === 0}
+          >
+            <Folder size={14} className={folderActive ? 'text-foreground' : 'text-muted-foreground'} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {folders.map(f => (
+            <DropdownMenuItem key={f.id} onSelect={(e) => { e.preventDefault(); toggleFolder(f.id) }}>
+              <Folder size={14} className="mr-2" style={{ color: f.color }} />
+              {f.name}
+              {folderFilter.includes(f.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
+}
+
+// ── Filter helper ─────────────────────────────────────────────────────────────
+
+function applyFilters(
+  tasks: Task[],
+  priorityFilter: string[],
+  labelFilter: string[],
+  folderFilter: string[],
+) {
+  return tasks.filter(t => {
+    if (priorityFilter.length > 0 && !priorityFilter.includes(t.priority)) return false
+    if (labelFilter.length > 0 && !labelFilter.some(id => t.labels.split(',').filter(Boolean).includes(id))) return false
+    if (folderFilter.length > 0 && !folderFilter.includes(t.folder_id)) return false
+    return true
+  })
 }
 
 // ── Week navigation strip ─────────────────────────────────────────────────────
@@ -124,6 +186,7 @@ function WeekStrip({
   onDayClick,
   onPrev,
   onNext,
+  onToday,
 }: {
   weekOffset: number
   activeDate: string | null
@@ -131,6 +194,7 @@ function WeekStrip({
   onDayClick: (dateStr: string) => void
   onPrev: () => void
   onNext: () => void
+  onToday: () => void
 }) {
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
@@ -188,13 +252,14 @@ function WeekStrip({
       </div>
 
       <button
-        onClick={() => onDayClick(todayStr)}
+        onClick={onToday}
         className={cn(
-          'text-xs px-1.5 py-0.5 rounded border flex-shrink-0 transition-colors',
+          'p-1 rounded border flex-shrink-0 transition-colors',
           weekOffset === 0 ? 'border-primary text-primary' : 'border-border text-muted-foreground hover:bg-accent',
         )}
+        title="Go to today"
       >
-        Today
+        <Calendar size={14} />
       </button>
 
       <button
@@ -212,8 +277,9 @@ function WeekStrip({
 function UpcomingView() {
   const groups = useUpcomingGroups()
   const { setCreateTaskOpen } = useUIStore()
-  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
-  const [labelFilter, setLabelFilter] = useState<string | null>(null)
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
+  const [labelFilter, setLabelFilter] = useState<string[]>([])
+  const [folderFilter, setFolderFilter] = useState<string[]>([])
   const [weekOffset, setWeekOffset] = useState(0)
   const [activeDate, setActiveDate] = useState<string | null>(() => format(new Date(), 'yyyy-MM-dd'))
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -221,11 +287,7 @@ function UpcomingView() {
   const filtered = groups
     .map(g => ({
       ...g,
-      tasks: g.tasks.filter(t => {
-        if (priorityFilter && t.priority !== priorityFilter) return false
-        if (labelFilter && !t.labels.split(',').filter(Boolean).includes(labelFilter)) return false
-        return true
-      }),
+      tasks: applyFilters(g.tasks, priorityFilter, labelFilter, folderFilter),
     }))
     .filter(g => g.tasks.length > 0)
 
@@ -268,7 +330,6 @@ function UpcomingView() {
   const handleTodayClick = useCallback(() => {
     setWeekOffset(0)
     const todayStr = format(new Date(), 'yyyy-MM-dd')
-    // Scroll to today if it has tasks, otherwise to the nearest upcoming group
     const todayGroup = filtered.find(g => !g.isOverdue && g.key === todayStr)
     const nearestGroup = filtered.find(g => !g.isOverdue && g.key >= todayStr)
       ?? filtered.find(g => !g.isOverdue)
@@ -318,21 +379,15 @@ function UpcomingView() {
         weekOffset={weekOffset}
         activeDate={activeDate}
         datesWithTasks={datesWithTasks}
-        onDayClick={(d) => {
-          if (d === format(new Date(), 'yyyy-MM-dd')) {
-            handleTodayClick()
-          } else {
-            handleDayClick(d)
-          }
-        }}
+        onDayClick={handleDayClick}
         onPrev={handlePrev}
         onNext={handleNext}
+        onToday={handleTodayClick}
       />
-      <UpcomingFilters
-        priorityFilter={priorityFilter}
-        setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter}
-        setLabelFilter={setLabelFilter}
+      <FilterBar
+        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
+        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
+        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -350,13 +405,13 @@ function UpcomingView() {
                 'px-2 py-1 text-sm font-bold mb-1',
                 group.isOverdue ? 'text-red-400'
                   : group.isToday ? 'text-green-600'
-                  : group.label === 'Tomorrow' ? 'text-orange-400'
+                  : group.isTomorrow ? 'text-orange-400'
                   : 'text-muted-foreground',
               )}>
                 {group.label}
               </div>
               {group.tasks.map(task => (
-                <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
+                <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren hideDeadline />
               ))}
             </div>
           ))}
@@ -441,22 +496,18 @@ function FolderView() {
 function AllTasksView() {
   const allTasks = useAllTasks()
   const { setCreateTaskOpen } = useUIStore()
-  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
-  const [labelFilter, setLabelFilter] = useState<string | null>(null)
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
+  const [labelFilter, setLabelFilter] = useState<string[]>([])
+  const [folderFilter, setFolderFilter] = useState<string[]>([])
 
-  const filtered = allTasks.filter(t => {
-    if (priorityFilter && t.priority !== priorityFilter) return false
-    if (labelFilter && !t.labels.split(',').filter(Boolean).includes(labelFilter)) return false
-    return true
-  })
+  const filtered = applyFilters(allTasks, priorityFilter, labelFilter, folderFilter)
 
   return (
     <div className="flex flex-col h-full">
-      <UpcomingFilters
-        priorityFilter={priorityFilter}
-        setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter}
-        setLabelFilter={setLabelFilter}
+      <FilterBar
+        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
+        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
+        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -482,32 +533,19 @@ function AllTasksView() {
 function LabelView() {
   const labelTasks = useLabelTasks()
   const { setCreateTaskOpen } = useUIStore()
-  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
+  const [labelFilter, setLabelFilter] = useState<string[]>([])
+  const [folderFilter, setFolderFilter] = useState<string[]>([])
 
-  const filtered = labelTasks.filter(t => {
-    if (priorityFilter && t.priority !== priorityFilter) return false
-    return true
-  })
+  const filtered = applyFilters(labelTasks, priorityFilter, labelFilter, folderFilter)
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b">
-        <div className="flex items-center gap-1">
-          {PRIORITY_OPTS.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setPriorityFilter(priorityFilter === p.id ? null : p.id)}
-              className={cn(
-                'p-1.5 rounded transition-colors hover:bg-accent',
-                priorityFilter === p.id && 'bg-accent',
-              )}
-              title={p.title}
-            >
-              <Flag size={14} style={{ color: p.color }} />
-            </button>
-          ))}
-        </div>
-      </div>
+      <FilterBar
+        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
+        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
+        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
+      />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
           <FolderOpen size={40} className="opacity-20" />
@@ -519,7 +557,7 @@ function LabelView() {
       ) : (
         <div className="flex-1 overflow-y-auto p-2">
           {filtered.map(task => (
-            <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren />
+            <TaskItem key={task.id} task={task} depth={0} showFolder={true} hideChildren hideLabels />
           ))}
         </div>
       )}
@@ -561,59 +599,74 @@ function CompletedView() {
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
   const { updateTask, deleteTask } = useTasksStore()
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
+  const [labelFilter, setLabelFilter] = useState<string[]>([])
+  const [folderFilter, setFolderFilter] = useState<string[]>([])
 
-  if (tasks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
-        <FolderOpen size={40} className="opacity-20" />
-        <p>No completed tasks</p>
-      </div>
-    )
-  }
+  const filtered = applyFilters(tasks, priorityFilter, labelFilter, folderFilter)
 
   return (
-    <div className="p-2">
-      {tasks.map(task => {
-        const folder = folders.find(f => f.id === task.folder_id)
-        const labelIds = task.labels.split(',').filter(Boolean)
-        return (
-          <div
-            key={task.id}
-            className="flex items-start gap-2 px-2 py-2 border-b border-border/40 hover:bg-accent/30 transition-colors group"
-          >
-            <button
-              onClick={() => void updateTask(task.id, { status: 'pending', completed_at: '' })}
-              className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
-              title="Mark as pending"
-            >
-              <RotateCcw size={16} />
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-base line-through opacity-70">{task.title}</p>
-              <div className="flex items-center gap-3 mt-0.5 text-sm text-muted-foreground flex-wrap">
-                {task.completed_at && <span>{formatCompletedAt(task.completed_at)}</span>}
-                {labelIds.map(id => {
-                  const label = labels.find(l => l.id === id)
-                  return label ? (
-                    <span key={id} className="flex items-center gap-1" style={{ color: label.color }}>
-                      <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: label.color }} />
-                      {label.name}
-                    </span>
-                  ) : null
-                })}
-                {folder && <span>{folder.name}</span>}
+    <div className="flex flex-col h-full">
+      <FilterBar
+        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
+        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
+        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
+      />
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
+          <FolderOpen size={40} className="opacity-20" />
+          <p>No completed tasks</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-2">
+          {filtered.map(task => {
+            const folder = folders.find(f => f.id === task.folder_id)
+            const labelIds = task.labels.split(',').filter(Boolean)
+            return (
+              <div
+                key={task.id}
+                className="flex items-start gap-2 px-2 py-2 border-b border-border/40 hover:bg-accent/30 transition-colors group"
+              >
+                <button
+                  onClick={() => void updateTask(task.id, { status: 'pending', completed_at: '' })}
+                  className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  title="Mark as pending"
+                >
+                  <RotateCcw size={16} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base line-through opacity-70">{task.title}</p>
+                  <div className="flex items-center gap-3 mt-0.5 text-sm text-muted-foreground flex-wrap">
+                    {task.completed_at && <span>{formatCompletedAt(task.completed_at)}</span>}
+                    {labelIds.map(id => {
+                      const label = labels.find(l => l.id === id)
+                      return label ? (
+                        <span key={id} className="flex items-center gap-1" style={{ color: label.color }}>
+                          <Tag size={12} />
+                          {label.name}
+                        </span>
+                      ) : null
+                    })}
+                    {folder && (
+                      <span className="flex items-center gap-1" style={{ color: folder.color }}>
+                        <Folder size={12} />
+                        {folder.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => void deleteTask(task.id)}
+                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
-            </div>
-            <button
-              onClick={() => void deleteTask(task.id)}
-              className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1"
-              title="Delete"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
