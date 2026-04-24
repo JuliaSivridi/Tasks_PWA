@@ -155,7 +155,9 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
     : deadlineStatus === 'week' ? 'text-violet-400'
     : 'text-muted-foreground'
 
-  const hasSecondLine = (!hideDeadline && task.deadline_date) || (!hideLabels && labelIds.length > 0) || (folder && showFolder) || task.is_recurring || totalChildCount > 0
+  // When hideDeadline: show time only (date is already in the group header)
+  const deadlineVisible = task.deadline_date && (!hideDeadline || task.deadline_time)
+  const hasSecondLine = deadlineVisible || (!hideLabels && labelIds.length > 0) || (folder && showFolder) || task.is_recurring || totalChildCount > 0
 
   const handleComplete = async () => {
     if (task.is_recurring && task.deadline_date) {
@@ -382,10 +384,16 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
             {task.is_recurring && (
               <RefreshCw size={12} className="text-muted-foreground opacity-60 flex-shrink-0" />
             )}
-            {!hideDeadline && task.deadline_date && (
-              <span className={cn('font-light', timeColorClass)}>
-                {formatTaskDeadlineLabel(task.deadline_date, task.deadline_time)}
-              </span>
+            {task.deadline_date && (
+              hideDeadline
+                ? task.deadline_time && (
+                    <span className={cn('font-light', timeColorClass)}>{task.deadline_time}</span>
+                  )
+                : (
+                    <span className={cn('font-light', timeColorClass)}>
+                      {formatTaskDeadlineLabel(task.deadline_date, task.deadline_time)}
+                    </span>
+                  )
             )}
             {!hideLabels && labelIds.map(id => {
               const label = labels.find(l => l.id === id)

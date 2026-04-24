@@ -403,10 +403,7 @@ function UpcomingView() {
             <div key={group.key} data-date={group.isOverdue ? undefined : group.key}>
               <div className={cn(
                 'px-2 py-1 text-sm font-bold mb-1',
-                group.isOverdue ? 'text-red-400'
-                  : group.isToday ? 'text-green-600'
-                  : group.isTomorrow ? 'text-orange-400'
-                  : 'text-muted-foreground',
+                group.isOverdue ? 'text-red-400' : 'text-muted-foreground',
               )}>
                 {group.label}
               </div>
