@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stler Tasks — Technical Specification</title>
+  <style>
+  @page { margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    background: #fff;
+    padding: 0;
+  }
+
+  /* Cover page */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 80px 72px;
+    background: #1c1c1c;
+    color: #fff;
+    page-break-after: always;
+  }
+  .cover .logo {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .cover .logo span { color: #e07e38; }
+  .cover .subtitle {
+    font-size: 18px;
+    color: #a1a1aa;
+    margin-bottom: 40px;
+  }
+  .cover .meta { font-size: 13px; color: #71717a; line-height: 2; }
+  .cover .meta strong { color: #d4d4d8; }
+  .cover .accent-line {
+    width: 60px;
+    height: 4px;
+    background: #e07e38;
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+  .cover .inspiration {
+    margin-top: 48px;
+    padding: 16px 20px;
+    border: 1px solid #2a2a2a;
+    border-left: 3px solid #e07e38;
+    border-radius: 6px;
+    background: #222;
+    font-size: 12px;
+    color: #a1a1aa;
+    max-width: 480px;
+  }
+  .cover .inspiration strong { color: #e4e4e7; }
+
+  /* Content pages */
+  .content {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 56px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1c1c1c;
+    margin-top: 48px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e07e38;
+    page-break-before: always;
+  }
+  h1:first-child { page-break-before: avoid; margin-top: 0; }
+
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1c1c1c;
+    margin-top: 32px;
+    margin-bottom: 10px;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 20px;
+    margin-bottom: 6px;
+  }
+
+  p { margin-bottom: 12px; }
+
+  a { color: #e07e38; text-decoration: none; }
+
+  ul, ol {
+    margin: 8px 0 12px 22px;
+  }
+  li { margin-bottom: 4px; }
+
+  code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #d97706;
+  }
+
+  pre {
+    background: #1c1c1c;
+    color: #e4e4e7;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0 16px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 16px;
+    font-size: 12.5px;
+  }
+  th {
+    background: #f4f4f5;
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #e4e4e7;
+    color: #374151;
+  }
+  td {
+    padding: 7px 12px;
+    border: 1px solid #e4e4e7;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    margin-right: 4px;
+  }
+
+  .callout {
+    background: #fff7ed;
+    border-left: 3px solid #e07e38;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 12.5px;
+  }
+
+  .note {
+    background: #f0f9ff;
+    border-left: 3px solid #0ea5e9;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 12.5px;
+  }
+
+  .dir-tree {
+    background: #1c1c1c;
+    color: #e4e4e7;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0 16px;
+    font-family: 'Consolas', monospace;
+    font-size: 11.5px;
+    line-height: 1.8;
+  }
+  .dir-tree .dim { color: #71717a; }
+  .dir-tree .orange { color: #fb923c; }
+  .dir-tree .green { color: #86efac; }
+  .dir-tree .blue { color: #93c5fd; }
+
+  .toc {
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin: 24px 0 32px;
+  }
+  .toc h2 { margin-top: 0; margin-bottom: 12px; font-size: 15px; }
+  .toc ol { margin: 0; }
+  .toc li { margin-bottom: 6px; font-size: 13px; }
+  .toc li a { color: #374151; }
+  .toc li a:hover { color: #e07e38; }
+
+  @media print {
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+  </style>
+</head>
+<body>
+
+<!-- ─── Cover ─────────────────────────────────────────────────────────────── -->
+<div class="cover">
+  <div class="logo">Stler <span>Tasks</span></div>
+  <div class="subtitle">Technical Specification</div>
+  <div class="accent-line"></div>
+  <div class="meta">
+    <strong>Version</strong> 1.0 &nbsp;·&nbsp; April 2026<br>
+    <strong>Repository</strong> github.com/JuliaSivridi/Tasks_PWA<br>
+    <strong>Stack</strong> React 19 · TypeScript 5 · Zustand 5 · Vite 7 · PWA<br>
+    <strong>Database</strong> Google Sheets API v4 (user's own spreadsheet)<br>
+    <strong>Offline</strong> Dexie IndexedDB + async sync queue
+  </div>
+  <div class="inspiration">
+    <strong>Design principle:</strong> no backend to operate — all data lives in the user's own
+    <strong>db_tasks</strong> Google Spreadsheet, found or created automatically on first login.
+    Every write goes to IndexedDB instantly; the offline queue flushes to Sheets asynchronously.
+  </div>
+</div>
+
+<!-- ─── Content ───────────────────────────────────────────────────────────── -->
+<div class="content">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#tech-stack">Tech Stack</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#structure">Package / Folder Structure</a></li>
+      <li><a href="#data-model">Data Model</a></li>
+      <li><a href="#storage">Database / Storage Schema</a></li>
+      <li><a href="#auth">Authentication &amp; First-Launch Setup</a></li>
+      <li><a href="#sync">Synchronization / API Layer</a></li>
+      <li><a href="#screens">Screens / Pages</a></li>
+      <li><a href="#components">Key Components</a></li>
+      <li><a href="#theme">Theme &amp; Colors</a></li>
+      <li><a href="#navigation">Navigation</a></li>
+      <li><a href="#cicd">CI/CD &amp; Build</a></li>
+      <li><a href="#setup">First-Time Developer Setup</a></li>
+      <li><a href="#algorithms">Key Algorithms</a></li>
+    </ol>
+  </div>
+
+  <!-- ─── 1. Overview ──────────────────────────────────────────────────────── -->
+  <h1 id="overview">1. Overview</h1>
+
+  <p>Stler Tasks is a personal task manager Progressive Web App (PWA). All user data lives in the user's own <strong>Google Spreadsheet</strong> named <code>db_tasks</code>, which acts as a zero-cost serverless database. The app is fully offline-capable: edits queue locally in IndexedDB and sync to Sheets when connectivity is restored.</p>
+
+  <h2>Key Design Decisions</h2>
+  <table>
+    <tr><th>Decision</th><th>Rationale</th></tr>
+    <tr><td><strong>Google Sheets as database</strong></td><td>No backend to operate. Data is always owned by the user. Free API quota is sufficient for personal use.</td></tr>
+    <tr><td><strong>Offline-first writes</strong></td><td>Every write goes to IndexedDB immediately. Sync is fire-and-forget via an async queue, so the UI is never blocked by network.</td></tr>
+    <tr><td><strong>Optimistic UI</strong></td><td>In-memory Zustand state updates instantly. Conflict resolution: last-write-wins by <code>updated_at</code> timestamp.</td></tr>
+    <tr><td><strong>Token in localStorage</strong></td><td>Single-user personal tool. XSS tradeoff is explicitly accepted to enable seamless page refresh without OAuth popup.</td></tr>
+    <tr><td><strong>No URL router</strong></td><td>Single-page app; view state lives in Zustand <code>uiStore</code>. No deeplinks needed for a personal tool.</td></tr>
+    <tr><td><strong>PWA + service worker</strong></td><td>Installable on desktop and mobile. NetworkFirst caching for Sheets API (10 s timeout). Works offline with cached data.</td></tr>
+  </table>
+
+  <!-- ─── 2. Tech Stack ────────────────────────────────────────────────────── -->
+  <h1 id="tech-stack">2. Tech Stack</h1>
+
+  <table>
+    <tr><th>Layer</th><th>Library</th><th>Version</th><th>Note</th></tr>
+    <tr><td>UI Framework</td><td>React</td><td>^19.2.0</td><td>Concurrent mode, no class components</td></tr>
+    <tr><td>Language</td><td>TypeScript</td><td>~5.9.3</td><td>Strict mode; path alias <code>@</code> → <code>src/</code></td></tr>
+    <tr><td>Build</td><td>Vite</td><td>^7.3.1</td><td>ESM; dev server at :5173</td></tr>
+    <tr><td>PWA</td><td>vite-plugin-pwa</td><td>^1.2.0</td><td>Workbox, autoUpdate strategy</td></tr>
+    <tr><td>Styling</td><td>Tailwind CSS</td><td>^3.4.19</td><td>CSS custom properties theme (light + dark)</td></tr>
+    <tr><td>Components</td><td>Radix UI / shadcn</td><td>various</td><td>Headless, unstyled primitives</td></tr>
+    <tr><td>Icons</td><td>lucide-react</td><td>^0.575.0</td><td></td></tr>
+    <tr><td>State</td><td>Zustand</td><td>^5.0.11</td><td><code>persist</code> middleware for auth store</td></tr>
+    <tr><td>Local DB</td><td>Dexie (IndexedDB)</td><td>^4.3.0</td><td>4 tables; v1 schema</td></tr>
+    <tr><td>Forms</td><td>react-hook-form + Zod</td><td>^7.71.2 + ^4.3.6</td><td></td></tr>
+    <tr><td>Dates</td><td>date-fns</td><td>^4.1.0</td><td></td></tr>
+    <tr><td>DnD</td><td>@dnd-kit</td><td>core ^6.3.1, sortable ^10</td><td>Drag-to-reorder + drag-to-reparent</td></tr>
+    <tr><td>Auth</td><td>Google Identity Services</td><td>—</td><td>Script injected at runtime from Google CDN</td></tr>
+    <tr><td>Remote DB</td><td>Google Sheets API v4</td><td>—</td><td>REST over <code>fetch</code></td></tr>
+    <tr><td>File search</td><td>Google Drive API v3</td><td>—</td><td>Spreadsheet lookup on first launch</td></tr>
+  </table>
+
+  <!-- ─── 3. Architecture ──────────────────────────────────────────────────── -->
+  <h1 id="architecture">3. Architecture</h1>
+
+  <p><strong>Pattern:</strong> Feature-sliced React SPA — no routing library. All navigation is Zustand state. No backend.</p>
+
+  <pre><code>┌──────────────────────────────────────────────────────────────┐
+│                        React UI Layer                        │
+│  LoginPage · AppShell · Sidebar · TaskList · TaskItem · …   │
+└────────────────────┬─────────────────────────────────────────┘
+                     │ reads / dispatches
+┌────────────────────▼─────────────────────────────────────────┐
+│                      Zustand Stores                          │
+│  authStore · tasksStore · foldersStore · labelsStore         │
+│  uiStore · prefsStore · syncStore                            │
+└──────┬──────────────────────┬────────────────────────────────┘
+       │ persist (Dexie)      │ enqueue (offlineQueue)
+┌──────▼──────┐        ┌──────▼──────────────────────────────┐
+│  Dexie DB   │        │           syncService                │
+│ (IndexedDB) │        │  scheduleFlush · flush · pull        │
+└─────────────┘        └──────┬──────────────────────────────┘
+                               │ HTTP REST
+                  ┌────────────▼──────────────────────────────┐
+                  │  Google Sheets API v4 + Drive API v3       │
+                  │  spreadsheet: db_tasks                     │
+                  └───────────────────────────────────────────┘</code></pre>
+
+  <h2>Write Path</h2>
+  <ol>
+    <li>User action → <code>tasksStore.addTask()</code> / <code>updateTask()</code> / etc.</li>
+    <li>Store writes to Dexie immediately (synchronous from user's perspective).</li>
+    <li>Store calls <code>enqueue('task', 'update', id, payload)</code> → Dexie <code>queue</code> table.</li>
+    <li>Store calls <code>scheduleFlush()</code> → debounced 800 ms timer.</li>
+    <li>Timer fires → <code>flush()</code> sends deduplicated queue to Sheets API.</li>
+  </ol>
+
+  <h2>Read Path</h2>
+  <ol>
+    <li>On app init: <code>initialLoad()</code> → <code>flush()</code> → <code>pull()</code>.</li>
+    <li><code>pull()</code> fetches tasks/folders/labels in parallel from Sheets.</li>
+    <li>Each store's <code>upsertMany()</code> merges into Dexie + memory (last-write-wins by <code>updated_at</code>).</li>
+    <li>On network reconnect: <code>fullSync()</code> = <code>flush()</code> + <code>pull()</code>.</li>
+    <li>On app returning to foreground (stale &gt; 5 min): <code>fullSync()</code>.</li>
+  </ol>
+
+  <h2>Error Handling</h2>
+  <table>
+    <tr><th>Scenario</th><th>Handling</th></tr>
+    <tr><td>Sheets API 401</td><td>One silent token refresh + retry request</td></tr>
+    <tr><td>Queue item fails</td><td><code>retryCount++</code>; max 5 retries; silently dropped after</td></tr>
+    <tr><td>Init failure (no network)</td><td>Fallback to Dexie-only; <code>syncError</code> shown in sidebar footer</td></tr>
+    <tr><td>Token expired on refresh</td><td>User sees LoginPage</td></tr>
+  </table>
+
+  <!-- ─── 4. Folder Structure ──────────────────────────────────────────────── -->
+  <h1 id="structure">4. Package / Folder Structure</h1>
+
+  <div class="dir-tree">
+<span class="orange">src/</span><br>
+├── <span class="green">App.tsx</span>                   <span class="dim">Auth gate: LoginPage or AppShell</span><br>
+├── <span class="green">main.tsx</span>                  <span class="dim">React entry, StrictMode mount</span><br>
+├── <span class="green">index.css</span>                 <span class="dim">Tailwind + CSS custom properties (light/dark theme)</span><br>
+│<br>
+├── <span class="orange">api/</span><br>
+│   ├── <span class="blue">sheetsClient.ts</span>       <span class="dim">Base fetch wrapper; token refresh; row-index cache</span><br>
+│   ├── <span class="blue">tasksApi.ts</span>           <span class="dim">Tasks sheet CRUD (append/update/fetch, 17 cols)</span><br>
+│   ├── <span class="blue">foldersApi.ts</span>         <span class="dim">Folders sheet CRUD (4 cols)</span><br>
+│   ├── <span class="blue">labelsApi.ts</span>          <span class="dim">Labels sheet CRUD (4 cols)</span><br>
+│   ├── <span class="blue">settingsApi.ts</span>        <span class="dim">Load/save prefs as JSON blob in settings!A1</span><br>
+│   └── <span class="blue">spreadsheetSetup.ts</span>   <span class="dim">Find or create "db_tasks" in user's Drive</span><br>
+│<br>
+├── <span class="orange">services/</span><br>
+│   ├── <span class="blue">authService.ts</span>        <span class="dim">GIS script inject; token client init; userinfo fetch</span><br>
+│   ├── <span class="blue">db.ts</span>                 <span class="dim">Dexie schema v1: tasks, folders, labels, queue</span><br>
+│   ├── <span class="blue">offlineQueue.ts</span>       <span class="dim">Dexie queue helpers: enqueue/getPending/markDone/markFailed</span><br>
+│   ├── <span class="blue">syncService.ts</span>        <span class="dim">flush · pull · initialLoad · scheduleFlush · fullSync</span><br>
+│   └── <span class="blue">recurrenceService.ts</span>  <span class="dim">getNextDueDate · createNextOccurrence</span><br>
+│<br>
+├── <span class="orange">store/</span><br>
+│   ├── <span class="blue">authStore.ts</span>          <span class="dim">User, token, spreadsheetId — persisted to localStorage</span><br>
+│   ├── <span class="blue">tasksStore.ts</span>         <span class="dim">In-memory + Dexie tasks; all CRUD + upsertMany</span><br>
+│   ├── <span class="blue">foldersStore.ts</span>       <span class="dim">In-memory + Dexie folders; ensureInbox</span><br>
+│   ├── <span class="blue">labelsStore.ts</span>        <span class="dim">In-memory + Dexie labels; sorted by sort_order</span><br>
+│   ├── <span class="blue">uiStore.ts</span>            <span class="dim">selectedView, sidebarOpen, createTaskOpen</span><br>
+│   ├── <span class="blue">prefsStore.ts</span>         <span class="dim">Sidebar section collapse; saved to Sheets settings (1 s debounce)</span><br>
+│   └── <span class="blue">syncStore.ts</span>          <span class="dim">isSyncing, isOnline, lastSyncAt, pendingCount, syncError</span><br>
+│<br>
+├── <span class="orange">hooks/</span><br>
+│   ├── <span class="blue">useTasks.ts</span>           <span class="dim">Derived hooks: useUpcomingGroups · useAllTasks · useLabelTasks · etc.</span><br>
+│   └── <span class="blue">useSync.ts</span>            <span class="dim">online/offline/visibilitychange/pagehide listeners</span><br>
+│<br>
+├── <span class="orange">types/</span>                        <span class="dim">task.ts · folder.ts · label.ts · sheets.ts · sync.ts</span><br>
+│<br>
+├── <span class="orange">utils/</span><br>
+│   ├── <span class="blue">constants.ts</span>          <span class="dim">TASK_COL · FOLDER_COL · LABEL_COL · INBOX_FOLDER_ID · presets</span><br>
+│   ├── <span class="blue">sheetsMapper.ts</span>       <span class="dim">rowToTask / taskToRow / rowToFolder / rowToLabel / etc.</span><br>
+│   ├── <span class="blue">dateUtils.ts</span>          <span class="dim">getDeadlineStatus · formatTaskDeadlineLabel · formatDayGroupLabel</span><br>
+│   ├── <span class="blue">uuid.ts</span>               <span class="dim">generateId(prefix) → 'tsk_a3f8c912'</span><br>
+│   └── <span class="blue">lib/utils.ts</span>          <span class="dim">cn() — clsx + tailwind-merge</span><br>
+│<br>
+└── <span class="orange">components/</span><br>
+    ├── <span class="orange">layout/</span>   <span class="dim">AppShell · Header · LoginPage · Sidebar</span><br>
+    ├── <span class="orange">tasks/</span>    <span class="dim">TaskList · TaskItem · TaskCreateModal · TaskChildren · TimePickerDialog</span><br>
+    ├── <span class="orange">common/</span>   <span class="dim">ConfirmDialog</span><br>
+    └── <span class="orange">ui/</span>       <span class="dim">shadcn/Radix wrappers (button, input, dialog, select, dropdown-menu, …)</span>
+  </div>
+
+  <!-- ─── 5. Data Model ────────────────────────────────────────────────────── -->
+  <h1 id="data-model">5. Data Model</h1>
+
+  <h2>Task</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr>
+    <tr><td><code>id</code></td><td>string</td><td>generated</td><td><code>tsk_</code> + 8 random hex chars</td></tr>
+    <tr><td><code>parent_id</code></td><td>string</td><td><code>''</code></td><td>Parent task ID; empty = root task</td></tr>
+    <tr><td><code>folder_id</code></td><td>string</td><td>INBOX_FOLDER_ID</td><td>Folder assignment</td></tr>
+    <tr><td><code>title</code></td><td>string</td><td>required</td><td>Task text</td></tr>
+    <tr><td><code>status</code></td><td>'pending' | 'completed' | 'deleted'</td><td>'pending'</td><td>Soft-delete via 'deleted'</td></tr>
+    <tr><td><code>priority</code></td><td>'urgent' | 'important' | 'normal'</td><td>'normal'</td><td>Shown as colored flag</td></tr>
+    <tr><td><code>deadline_date</code></td><td>string</td><td><code>''</code></td><td>ISO <code>YYYY-MM-DD</code> or empty</td></tr>
+    <tr><td><code>deadline_time</code></td><td>string</td><td><code>''</code></td><td><code>HH:MM</code> 24-hour or empty</td></tr>
+    <tr><td><code>is_recurring</code></td><td>boolean</td><td>false</td><td>Recurring task flag</td></tr>
+    <tr><td><code>recur_type</code></td><td>'days' | 'weeks' | 'months' | ''</td><td><code>''</code></td><td>Recurrence unit</td></tr>
+    <tr><td><code>recur_value</code></td><td>number</td><td>1</td><td>Interval (1–365)</td></tr>
+    <tr><td><code>labels</code></td><td>string</td><td><code>''</code></td><td>Comma-separated label IDs</td></tr>
+    <tr><td><code>sort_order</code></td><td>number</td><td>0</td><td>Manual sort; increments of 10</td></tr>
+    <tr><td><code>created_at</code></td><td>string</td><td>now()</td><td>ISO 8601 timestamp</td></tr>
+    <tr><td><code>updated_at</code></td><td>string</td><td>now()</td><td>ISO 8601; conflict resolution key</td></tr>
+    <tr><td><code>completed_at</code></td><td>string</td><td><code>''</code></td><td>ISO 8601 or empty</td></tr>
+    <tr><td><code>is_expanded</code></td><td>boolean</td><td>true</td><td>UI subtask expand state</td></tr>
+  </table>
+
+  <div class="callout">
+    Recurring tasks are <strong>never completed</strong> — checking one advances <code>deadline_date</code> by <code>recur_value recur_type</code> and calls <code>flush()</code> immediately (not debounced).
+  </div>
+
+  <h2>Folder</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>id</code></td><td>string</td><td><code>fld_xxxxxxxx</code>; Inbox = <code>fld-inbox</code></td></tr>
+    <tr><td><code>name</code></td><td>string</td><td>Display name</td></tr>
+    <tr><td><code>color</code></td><td>string</td><td>Hex <code>#RRGGBB</code></td></tr>
+    <tr><td><code>sort_order</code></td><td>number</td><td>Sidebar display order</td></tr>
+  </table>
+
+  <h2>Label</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>id</code></td><td>string</td><td><code>lbl_xxxxxxxx</code></td></tr>
+    <tr><td><code>name</code></td><td>string</td><td>Display name</td></tr>
+    <tr><td><code>color</code></td><td>string</td><td>Hex <code>#RRGGBB</code></td></tr>
+    <tr><td><code>sort_order</code></td><td>number</td><td>Sidebar display order (column D in Sheets)</td></tr>
+  </table>
+
+  <h2>QueueItem (offline sync queue)</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>localId</code></td><td>number?</td><td>Dexie auto-increment primary key</td></tr>
+    <tr><td><code>entityType</code></td><td>'task' | 'folder' | 'label'</td><td>Target entity type</td></tr>
+    <tr><td><code>operationType</code></td><td>'create' | 'update' | 'delete'</td><td>Operation</td></tr>
+    <tr><td><code>entityId</code></td><td>string</td><td>The entity's <code>id</code></td></tr>
+    <tr><td><code>payload</code></td><td>Record&lt;string, unknown&gt;</td><td>Full entity snapshot at enqueue time</td></tr>
+    <tr><td><code>createdAt</code></td><td>string</td><td>ISO 8601; used for deduplication ordering</td></tr>
+    <tr><td><code>status</code></td><td>'pending' | 'processing' | 'failed'</td><td>Queue item state</td></tr>
+    <tr><td><code>retryCount</code></td><td>number</td><td>Incremented on failure; silently dropped at 5</td></tr>
+  </table>
+
+  <!-- ─── 6. Storage Schema ────────────────────────────────────────────────── -->
+  <h1 id="storage">6. Database / Storage Schema</h1>
+
+  <h2>Google Sheets — <code>db_tasks</code></h2>
+  <p>Spreadsheet found (by name, Drive API) or created automatically on first launch. ID stored in <code>authStore.spreadsheetId</code> → localStorage.</p>
+
+  <h3>Sheet: <code>tasks</code> &mdash; range <code>tasks!A:Q</code></h3>
+  <table>
+    <tr><th>Col</th><th>Index</th><th>Name</th><th>Format</th></tr>
+    <tr><td>A</td><td>0</td><td><code>id</code></td><td>text <code>tsk_xxxxxxxx</code></td></tr>
+    <tr><td>B</td><td>1</td><td><code>parent_id</code></td><td>text or empty</td></tr>
+    <tr><td>C</td><td>2</td><td><code>folder_id</code></td><td>text or empty</td></tr>
+    <tr><td>D</td><td>3</td><td><code>title</code></td><td>text</td></tr>
+    <tr><td>E</td><td>4</td><td><code>status</code></td><td><code>pending</code> / <code>completed</code> / <code>deleted</code></td></tr>
+    <tr><td>F</td><td>5</td><td><code>priority</code></td><td><code>urgent</code> / <code>important</code> / <code>normal</code></td></tr>
+    <tr><td>G</td><td>6</td><td><code>deadline_date</code></td><td><code>YYYY-MM-DD</code> or empty</td></tr>
+    <tr><td>H</td><td>7</td><td><code>deadline_time</code></td><td><code>HH:MM</code> or empty</td></tr>
+    <tr><td>I</td><td>8</td><td><code>is_recurring</code></td><td><code>TRUE</code> / <code>FALSE</code></td></tr>
+    <tr><td>J</td><td>9</td><td><code>recur_type</code></td><td><code>days</code> / <code>weeks</code> / <code>months</code> or empty</td></tr>
+    <tr><td>K</td><td>10</td><td><code>recur_value</code></td><td>numeric string <code>1</code>–<code>365</code></td></tr>
+    <tr><td>L</td><td>11</td><td><code>labels</code></td><td>comma-separated IDs or empty</td></tr>
+    <tr><td>M</td><td>12</td><td><code>sort_order</code></td><td>numeric string <code>0</code>, <code>10</code>, <code>20</code>, …</td></tr>
+    <tr><td>N</td><td>13</td><td><code>created_at</code></td><td>ISO 8601</td></tr>
+    <tr><td>O</td><td>14</td><td><code>updated_at</code></td><td>ISO 8601</td></tr>
+    <tr><td>P</td><td>15</td><td><code>completed_at</code></td><td>ISO 8601 or empty</td></tr>
+    <tr><td>Q</td><td>16</td><td><code>is_expanded</code></td><td><code>TRUE</code> / <code>FALSE</code></td></tr>
+  </table>
+
+  <h3>Sheet: <code>folders</code> &mdash; range <code>folders!A:D</code></h3>
+  <table>
+    <tr><th>Col</th><th>Index</th><th>Name</th><th>Format</th></tr>
+    <tr><td>A</td><td>0</td><td><code>id</code></td><td><code>fld_xxxxxxxx</code> or <code>fld-inbox</code></td></tr>
+    <tr><td>B</td><td>1</td><td><code>name</code></td><td>text</td></tr>
+    <tr><td>C</td><td>2</td><td><code>color</code></td><td>hex <code>#RRGGBB</code> or empty</td></tr>
+    <tr><td>D</td><td>3</td><td><code>sort_order</code></td><td>numeric string</td></tr>
+  </table>
+
+  <h3>Sheet: <code>labels</code> &mdash; range <code>labels!A:D</code></h3>
+  <table>
+    <tr><th>Col</th><th>Index</th><th>Name</th><th>Format</th></tr>
+    <tr><td>A</td><td>0</td><td><code>id</code></td><td><code>lbl_xxxxxxxx</code></td></tr>
+    <tr><td>B</td><td>1</td><td><code>name</code></td><td>text</td></tr>
+    <tr><td>C</td><td>2</td><td><code>color</code></td><td>hex <code>#RRGGBB</code></td></tr>
+    <tr><td>D</td><td>3</td><td><code>sort_order</code></td><td>numeric string</td></tr>
+  </table>
+
+  <h3>Sheet: <code>settings</code> &mdash; cell <code>settings!A1</code></h3>
+  <p>Single JSON string. Example:</p>
+  <pre><code>{"sectionOpen":{"priorities":true,"folders":true,"labels":true}}</code></pre>
+
+  <h2>Dexie IndexedDB — <code>TaskManagerDB</code> v1</h2>
+  <table>
+    <tr><th>Table</th><th>Key</th><th>Indices</th></tr>
+    <tr><td><code>tasks</code></td><td><code>&amp;id</code> (unique)</td><td><code>parent_id, folder_id, status, updated_at</code></td></tr>
+    <tr><td><code>folders</code></td><td><code>&amp;id</code> (unique)</td><td><code>parent_id</code></td></tr>
+    <tr><td><code>labels</code></td><td><code>&amp;id</code> (unique)</td><td>—</td></tr>
+    <tr><td><code>queue</code></td><td><code>++localId</code> (auto-inc)</td><td><code>entityType, operationType, status, createdAt</code></td></tr>
+  </table>
+
+  <h2>localStorage — <code>auth-storage</code></h2>
+  <p>Zustand <code>persist</code> middleware. Fields saved: <code>user</code>, <code>accessToken</code>, <code>tokenExpiry</code> (ms epoch), <code>spreadsheetId</code>. <code>isAuthenticated</code> is <strong>not</strong> persisted — recomputed on init.</p>
+
+  <!-- ─── 7. Authentication ─────────────────────────────────────────────────── -->
+  <h1 id="auth">7. Authentication &amp; First-Launch Setup</h1>
+
+  <p><strong>Flow:</strong> OAuth 2.0 implicit / token flow via Google Identity Services (GIS).</p>
+
+  <p><strong>Scopes:</strong> <code>email</code> &nbsp;·&nbsp; <code>profile</code> &nbsp;·&nbsp; <code>https://www.googleapis.com/auth/spreadsheets</code> &nbsp;·&nbsp; <code>https://www.googleapis.com/auth/drive.metadata.readonly</code></p>
+
+  <h2>Step-by-Step Auth Flow</h2>
+  <pre><code>1. App.tsx mounts → initAuth()
+   ├─ Load GIS script (accounts.google.com/gsi/client)
+   ├─ google.accounts.oauth2.initTokenClient({ client_id, scope, login_hint, callback })
+   └─ setTokenClient(client)
+
+2. Session restore check (silent, no UI):
+   ├─ localStorage token valid (now &lt; tokenExpiry − 60 s)?
+   │   └─ Restore session immediately → render AppShell
+   ├─ Token expired but user known?
+   │   └─ refreshToken() → tokenClient.requestAccessToken({ prompt: '' })
+   │       ├─ GIS grants silently → callback → resolveTokenRequest() → AppShell
+   │       └─ GIS fails → show LoginPage
+   └─ No user → show LoginPage
+
+3. User clicks "Sign in with Google":
+   └─ tokenClient.requestAccessToken({ prompt: '' })
+       └─ Google consent dialog (first time only) → callback fires
+
+4. GIS callback:
+   ├─ Error → rejectTokenRequest(error)
+   └─ Success:
+       ├─ setToken(access_token, expires_in)
+       │   token stored: accessToken, tokenExpiry = now + expiresIn×1000
+       └─ fetch /oauth2/v3/userinfo → setUser({ name, email, picture })
+
+5. isAuthenticated = true → AppShell renders
+
+6. AppShell.useEffect():
+   ├─ ensureSpreadsheet()   find or create "db_tasks" in Drive
+   ├─ initialLoad()         ensure headers; flush queue; pull; ensureInbox
+   └─ prefsStore.load()     fetch settings!A1
+
+7. useSync() hook:
+   └─ Registers: online/offline/pagehide/visibilitychange listeners</code></pre>
+
+  <h2>Token Refresh</h2>
+  <p><strong>Proactive:</strong> Before every Sheets API call — if <code>Date.now() &gt; tokenExpiry − 60_000</code>, call <code>refreshToken()</code> first.</p>
+  <p><strong>Reactive:</strong> On HTTP 401 response — one silent refresh + retry request.</p>
+
+  <h2>Logout</h2>
+  <p>Revoke token via <code>google.accounts.oauth2.revoke(token)</code>. Clear all Zustand state + localStorage key <code>auth-storage</code>.</p>
+
+  <h2>First-Launch Spreadsheet Setup</h2>
+  <ol>
+    <li>If <code>authStore.spreadsheetId</code> is non-empty → done.</li>
+    <li>Drive API: search for <code>name='db_tasks' AND mimeType='application/vnd.google-apps.spreadsheet'</code>.</li>
+    <li>Found: save first result's ID to <code>authStore</code>.</li>
+    <li>Not found: <code>POST /spreadsheets</code> with body declaring 4 sheets (tasks, folders, labels, settings).</li>
+    <li>Save new spreadsheet ID to <code>authStore.setSpreadsheetId()</code>.</li>
+  </ol>
+
+  <!-- ─── 8. Sync / API Layer ──────────────────────────────────────────────── -->
+  <h1 id="sync">8. Synchronization / API Layer</h1>
+
+  <h2>Sheets API Client (<code>sheetsClient.ts</code>)</h2>
+  <p>Base URL: <code>https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}/</code></p>
+  <p><strong>Row-index cache:</strong> A <code>Map&lt;entityId, rowNumber&gt;</code> avoids re-fetching column A on every update. Invalidated after every <code>flush()</code>. <code>findRowIndex(sheet, id)</code> fetches <code>{sheet}!A:A</code>, scans for the ID, returns 1-based row number or <code>null</code> (falls back to append).</p>
+
+  <h2>Offline Queue</h2>
+  <pre><code>enqueue(entityType, operationType, entityId, payload):
+  db.queue.add({
+    entityType, operationType, entityId, payload,
+    createdAt: now(), status: 'pending', retryCount: 0
+  })
+
+getPending():
+  db.queue.where('status').anyOf(['pending','failed'])
+          .and(item =&gt; item.retryCount &lt; 5).toArray()
+
+markProcessing(localId)  → update { status: 'processing' }
+markDone(localId)        → delete record
+markFailed(localId, n)   → update { status: 'failed', retryCount: n }
+getQueueLength()         → count pending + failed</code></pre>
+
+  <h2>flush()</h2>
+  <pre><code>1. items = getPending()
+2. if items.length === 0: return
+3. Deduplicate: Map&lt;"entityType:entityId:operationType" → latest by createdAt&gt;
+4. For superseded items: markDone(localId)
+5. For each latest item:
+   a. markProcessing(localId)
+   b. processQueueItem(item):
+      task  create → appendTask
+      task  update → apiUpdateTask
+      task  delete → apiUpdateTask({ ...task, status: 'deleted' })
+      folder create → appendFolder  |  folder update → apiUpdateFolder
+      label  create → appendLabel   |  label  update → apiUpdateLabel
+   c. markDone(localId)                  // success
+   d. on error: markFailed(localId, n+1) // will retry up to 5×
+6. invalidateRowCache()
+7. syncStore.setPendingCount(getQueueLength())</code></pre>
+
+  <h2>pull()</h2>
+  <pre><code>[tasks, folders, labels] = await Promise.all([
+  fetchAllTasks(), fetchAllFolders(), fetchAllLabels()
+])
+await Promise.all([
+  tasksStore.upsertMany(tasks),
+  foldersStore.upsertMany(folders),
+  labelsStore.upsertMany(labels),
+])
+syncStore.setLastSyncAt(now())</code></pre>
+
+  <div class="note">
+    <strong>Conflict resolution (upsertMany):</strong> last-write-wins by <code>updated_at</code>. Remote entity replaces local only if remote <code>updated_at</code> is newer. Implemented as a filtered <code>bulkPut</code>.
+  </div>
+
+  <h2>Sync Triggers</h2>
+  <table>
+    <tr><th>Event</th><th>Action</th><th>Delay</th></tr>
+    <tr><td>User edit</td><td><code>scheduleFlush()</code></td><td>800 ms debounced</td></tr>
+    <tr><td>Task complete (non-recurring)</td><td><code>flush()</code></td><td>Immediate</td></tr>
+    <tr><td>Tab hidden (<code>pagehide</code>)</td><td><code>flush()</code></td><td>Immediate</td></tr>
+    <tr><td><code>visibilitychange</code> → hidden</td><td><code>flush()</code></td><td>Immediate</td></tr>
+    <tr><td><code>visibilitychange</code> → visible, stale &gt; 5 min</td><td><code>fullSync()</code></td><td>Immediate</td></tr>
+    <tr><td><code>window.online</code></td><td><code>fullSync()</code></td><td>Immediate</td></tr>
+    <tr><td>Manual sidebar button</td><td><code>fullSync()</code></td><td>Immediate</td></tr>
+  </table>
+
+  <h2>Key Numbers</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th></tr>
+    <tr><td><code>scheduleFlush</code> debounce</td><td>800 ms</td></tr>
+    <tr><td>Token refresh buffer</td><td>60 s before expiry</td></tr>
+    <tr><td>Sheets API NetworkFirst timeout</td><td>10 s</td></tr>
+    <tr><td>Stale data threshold for fullSync</td><td>5 min (300 000 ms)</td></tr>
+    <tr><td>Queue retry limit</td><td>5 attempts</td></tr>
+    <tr><td><code>prefsStore</code> save debounce</td><td>1 000 ms</td></tr>
+  </table>
+
+  <!-- ─── 9. Screens / Pages ───────────────────────────────────────────────── -->
+  <h1 id="screens">9. Screens / Pages</h1>
+
+  <p>View routing is driven by <code>uiStore.selectedView</code>. No URL changes — state is ephemeral (app always starts on <code>'upcoming'</code> after reload).</p>
+
+  <table>
+    <tr><th>selectedView</th><th>Component</th><th>Hook</th><th>Sort</th></tr>
+    <tr><td><code>'upcoming'</code></td><td>UpcomingView</td><td>useUpcomingGroups</td><td>By date group, then time within group</td></tr>
+    <tr><td><code>'all'</code></td><td>AllTasksView</td><td>useAllTasks</td><td>Priority → deadline+time → created_at</td></tr>
+    <tr><td><code>'folder'</code></td><td>FolderView</td><td>useFilteredRootTasks</td><td>sort_order (drag-reorderable)</td></tr>
+    <tr><td><code>'label'</code></td><td>LabelView</td><td>useLabelTasks</td><td>Priority → deadline+time → created_at</td></tr>
+    <tr><td><code>'priority'</code></td><td>PriorityView</td><td>usePriorityTasks</td><td>Deadline+time → created_at</td></tr>
+    <tr><td><code>'completed'</code></td><td>CompletedView</td><td>useCompletedTasks</td><td>completed_at desc</td></tr>
+  </table>
+
+  <h2>Upcoming View</h2>
+  <p><strong>Layout:</strong> WeekStrip → FilterBar → scrollable day groups.</p>
+  <ul>
+    <li><strong>Overdue group:</strong> tasks with <code>deadline_date &lt; today</code> — shown first, red header.</li>
+    <li><strong>Date groups:</strong> one per future date; neutral <code>text-muted-foreground</code> headers in format <code>"16 Apr · Thursday · Today"</code> / <code>"18 Apr · Saturday"</code>.</li>
+    <li>Within each group: sorted by <code>deadline_time</code> (missing time sorts as <code>'99:99'</code>).</li>
+    <li>TaskItem props: <code>showFolder=true, hideChildren=true, hideDeadline=true</code> (shows time only if set).</li>
+    <li>IntersectionObserver tracks scroll position → updates <code>activeDate</code> → auto-advances <code>weekOffset</code>.</li>
+  </ul>
+
+  <h2>Folder View</h2>
+  <ul>
+    <li>DnD enabled: vertical drag = reorder (<code>sort_order</code> in steps of 10); drag-right &gt;50 px = reparent (update <code>parent_id</code>).</li>
+    <li>Subtasks rendered inline (hideChildren=false); no FilterBar.</li>
+    <li>Inbox: tasks with <code>folder_id = ''</code> are also included when Inbox is selected.</li>
+  </ul>
+
+  <h2>Completed View</h2>
+  <p>Each row: RotateCcw button (→ pending) · title (line-through) · completion time · label chips (Tag icon in label color) · folder (Folder icon in folder color) · Trash button (soft-delete). FilterBar with all 3 filters.</p>
+
+  <h2>Filter Logic (FilterBar — all views except Folder)</h2>
+  <pre><code>show task if:
+  (priorityFilter.length === 0 OR task.priority IN priorityFilter) AND
+  (labelFilter.length === 0   OR ANY labelFilter ID IN task.labels.split(',')) AND
+  (folderFilter.length === 0  OR task.folder_id IN folderFilter)</code></pre>
+  <p>OR logic within each category; AND logic between categories.</p>
+
+  <!-- ─── 10. Key Components ───────────────────────────────────────────────── -->
+  <h1 id="components">10. Key Components</h1>
+
+  <h2>TaskItem</h2>
+  <pre><code>Props: {
+  task: Task
+  depth: number           // 0 = root; padding-left = depth × 20px
+  showFolder?: boolean    // Show folder badge in row 2
+  hideChildren?: boolean  // Don't render subtasks
+  hideDeadline?: boolean  // Hide full date; show only deadline_time if present
+  hideLabels?: boolean    // Omit label chips from row 2
+}</code></pre>
+
+  <p><strong>Row 1:</strong> <code>[expand ↕] [Checkbox] [Title] [Clock] [Flag] [Tag] [+] [Pencil] [Trash]</code><br>
+  Desktop (md+): all icons inline. Mobile: Clock + MoreHorizontal dropdown with Priority and Labels submenus.</p>
+
+  <p><strong>Row 2</strong> (only rendered when has content):<br>
+  <code>[RefreshCw?] [deadline/time] [Label chips] [Folder icon+name] [✓ N / ○ N / ≡ N]</code></p>
+
+  <p>Subtask counter uses three icons: <code>Check</code> (completed) · <code>Circle</code> (pending) · <code>List</code> (total).</p>
+
+  <table>
+    <tr><th>Deadline status</th><th>Color</th><th>Tailwind class</th></tr>
+    <tr><td>Overdue</td><td>#f87171</td><td>text-red-400</td></tr>
+    <tr><td>Today</td><td>#16a34a</td><td>text-green-600</td></tr>
+    <tr><td>Tomorrow</td><td>#fb923c</td><td>text-orange-400</td></tr>
+    <tr><td>This week (2–7 days)</td><td>#a78bfa</td><td>text-violet-400</td></tr>
+    <tr><td>Future</td><td>muted</td><td>text-muted-foreground</td></tr>
+  </table>
+
+  <h2>TaskCreateModal</h2>
+  <pre><code>Props: { open, editing?: Task, parentId?: string, onClose }</code></pre>
+  <p><strong>Field order:</strong> Title → Due date + Time → <code>[ ] Repeat  every [N] [days/weeks/months]</code> → Priority → Labels → Folder.</p>
+  <p><strong>Title token parsing:</strong> <code>@FolderName</code> → resolves folder ID; <code>#LabelName</code> → adds label ID. Tokens stripped from stored title; spaces normalized.</p>
+  <p><strong>Inline label creation:</strong> "New" button → color picker (8 presets) + input + OK/✕. New label added to store immediately.</p>
+
+  <h2>TimePickerDialog</h2>
+  <pre><code>Props: { open, task: Task, onClose }</code></pre>
+  <p><strong>Fields:</strong> Date input · Time input · <code>[ ] Repeat  every [N] [days/weeks/months]</code> (all on one line when checked).</p>
+  <p><strong>Buttons:</strong> Clear (if date set) · Postpone (if recurring + deadline) · Cancel · Save.</p>
+  <p>"Clear" removes deadline_date, deadline_time, is_recurring, recur_type in one update call.</p>
+
+  <h2>FilterBar</h2>
+  <p>Three DropdownMenu buttons (Flag / Tag / Folder). Each uses <code>onSelect={(e) =&gt; e.preventDefault()}</code> to keep the menu open for multi-select. Button highlights with <code>bg-accent</code> when filter is active.</p>
+
+  <h2>WeekStrip</h2>
+  <p>7 day columns between prev/next arrows and a Calendar-icon today button. Per day cell: day number · single weekday letter (EEEEE) · dot (green if today, primary-color if has tasks). Today button border highlights when <code>weekOffset === 0</code>.</p>
+
+  <h2>Sidebar</h2>
+  <p><strong>Sections (top to bottom):</strong></p>
+  <ol>
+    <li>Add task (primary button)</li>
+    <li>Navigation: Upcoming · All tasks · Completed</li>
+    <li>Priorities (collapsible): Urgent · Important · Normal</li>
+    <li><strong>Labels</strong> (collapsible, above Folders): sorted by <code>sort_order</code>; Edit/Delete per label</li>
+    <li>Folders (collapsible): Inbox first, then sorted by <code>sort_order</code>; Edit/Delete per folder</li>
+    <li>Footer: RefreshCw sync button + "Synced HH:MM" / "Syncing…"</li>
+  </ol>
+  <p>Collapse state stored in <code>prefsStore.sectionOpen[key]</code>, persisted to <code>settings!A1</code> (1 000 ms debounced). <code>ItemFormModal</code> (shared for folder/label create/edit): name input + 8-color picker + Cancel/Save.</p>
+
+  <!-- ─── 11. Theme ─────────────────────────────────────────────────────────── -->
+  <h1 id="theme">11. Theme &amp; Colors</h1>
+
+  <p>All colors are CSS custom properties in <code>src/index.css</code>. Tailwind maps <code>bg-background</code>, <code>text-foreground</code>, etc. to these. Dark mode via <code>@media (prefers-color-scheme: dark)</code>.</p>
+
+  <table>
+    <tr><th>Token</th><th>Light hex</th><th>Dark hex</th><th>Usage</th></tr>
+    <tr><td><code>--background</code></td><td>#ffffff</td><td>#1c1c1c</td><td>Page background</td></tr>
+    <tr><td><code>--foreground</code></td><td>#1a1a29</td><td>#f2f2f2</td><td>Default text</td></tr>
+    <tr><td><code>--card</code></td><td>#ffffff</td><td>#363636</td><td>Card surfaces</td></tr>
+    <tr><td><code>--popover</code></td><td>#ffffff</td><td>#242424</td><td>Dropdowns, dialogs</td></tr>
+    <tr><td><code>--primary</code></td><td>#e07e38</td><td>#e89555</td><td>Buttons, active items, icons</td></tr>
+    <tr><td><code>--primary-foreground</code></td><td>#ffffff</td><td>#ffffff</td><td>Text on primary</td></tr>
+    <tr><td><code>--secondary</code></td><td>#f2f0ed</td><td>#363636</td><td>Secondary backgrounds</td></tr>
+    <tr><td><code>--muted</code></td><td>#f2f0ed</td><td>#363636</td><td>Muted surfaces</td></tr>
+    <tr><td><code>--muted-foreground</code></td><td>#6b6b6b</td><td>#949494</td><td>Placeholders, subtitles</td></tr>
+    <tr><td><code>--accent</code></td><td>#fffbf2</td><td>#2e2e2e</td><td>Hover states</td></tr>
+    <tr><td><code>--destructive</code></td><td>#ff6b6b</td><td>#e85c5c</td><td>Delete actions, errors</td></tr>
+    <tr><td><code>--border</code></td><td>#e0e0e0</td><td>#4a4a4a</td><td>Dividers, input borders</td></tr>
+    <tr><td><code>--ring</code></td><td>#e07e38</td><td>#e89555</td><td>Focus ring</td></tr>
+    <tr><td><code>--radius</code></td><td>0.5rem</td><td>—</td><td>Base border radius</td></tr>
+  </table>
+
+  <h2>Semantic Colors (hardcoded, not CSS vars)</h2>
+  <table>
+    <tr><th>Meaning</th><th>Hex</th><th>Tailwind</th></tr>
+    <tr><td>Overdue deadline</td><td>#f87171</td><td>text-red-400</td></tr>
+    <tr><td>Today deadline</td><td>#16a34a</td><td>text-green-600</td></tr>
+    <tr><td>Tomorrow deadline</td><td>#fb923c</td><td>text-orange-400</td></tr>
+    <tr><td>This week (2–7 days)</td><td>#a78bfa</td><td>text-violet-400</td></tr>
+    <tr><td>Priority: Urgent</td><td>#f87171</td><td>—</td></tr>
+    <tr><td>Priority: Important</td><td>#fb923c</td><td>—</td></tr>
+    <tr><td>Priority: Normal</td><td>#9ca3af</td><td>—</td></tr>
+  </table>
+
+  <h2>Label Color Presets (8)</h2>
+  <p>
+    <span style="display:inline-block;width:16px;height:16px;background:#ef4444;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#ef4444</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#f97316;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#f97316</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#eab308;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#eab308</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#22c55e;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#22c55e</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#06b6d4;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#06b6d4</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#3b82f6;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#3b82f6</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#8b5cf6;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#8b5cf6</code> &nbsp;
+    <span style="display:inline-block;width:16px;height:16px;background:#6b7280;border-radius:50%;vertical-align:middle;margin-right:4px"></span><code>#6b7280</code>
+  </p>
+
+  <!-- ─── 12. Navigation ───────────────────────────────────────────────────── -->
+  <h1 id="navigation">12. Navigation</h1>
+
+  <p>No URL routing. All navigation is <code>uiStore.setView()</code> calls. Mobile sidebar closes automatically on navigation.</p>
+
+  <table>
+    <tr><th>setView() call</th><th>selectedView</th><th>Auxiliary state</th></tr>
+    <tr><td><code>setView('upcoming')</code></td><td>'upcoming'</td><td>clears folder / label / priority</td></tr>
+    <tr><td><code>setView('all')</code></td><td>'all'</td><td>clears folder / label / priority</td></tr>
+    <tr><td><code>setView('folder', id)</code></td><td>'folder'</td><td><code>selectedFolderId = id</code></td></tr>
+    <tr><td><code>setView('label', id)</code></td><td>'label'</td><td><code>selectedLabelId = id</code></td></tr>
+    <tr><td><code>setView('priority', id)</code></td><td>'priority'</td><td><code>selectedPriority = id</code></td></tr>
+    <tr><td><code>setView('completed')</code></td><td>'completed'</td><td>clears folder / label / priority</td></tr>
+  </table>
+
+  <div class="note">No deeplinks or URL routing. The app always boots to <code>'upcoming'</code> view. Sharing a specific task or view is not supported.</div>
+
+  <h2>AppShell Layout</h2>
+  <ul>
+    <li><strong>Desktop (md+):</strong> fixed left sidebar (240 px) + main content flex-1.</li>
+    <li><strong>Mobile:</strong> Sidebar hidden; hamburger icon in Header opens a Radix Sheet drawer (left, 240 px wide).</li>
+    <li>Main content: <code>h-dvh</code> (dynamic viewport height for mobile browsers).</li>
+  </ul>
+
+  <!-- ─── 13. CI/CD & Build ────────────────────────────────────────────────── -->
+  <h1 id="cicd">13. CI/CD &amp; Build</h1>
+
+  <p>No CI pipeline. Manual local build + Vercel deployment.</p>
+
+  <h2>Scripts</h2>
+  <table>
+    <tr><th>Command</th><th>Action</th></tr>
+    <tr><td><code>npm run dev</code></td><td>Vite dev server at <code>localhost:5173</code></td></tr>
+    <tr><td><code>npm run build</code></td><td><code>tsc -b &amp;&amp; vite build</code> → <code>dist/</code></td></tr>
+    <tr><td><code>npm run preview</code></td><td>Serve <code>dist/</code> at <code>localhost:4173</code></td></tr>
+    <tr><td><code>npm run lint</code></td><td>ESLint across <code>src/</code></td></tr>
+  </table>
+
+  <h2>Vercel</h2>
+  <ul>
+    <li>Framework: Vite (auto-detected)</li>
+    <li>Build command: <code>npm run build</code></li>
+    <li>Output directory: <code>dist</code></li>
+    <li>Env var required: <code>VITE_GOOGLE_CLIENT_ID</code></li>
+    <li>Add Vercel domain to <em>Authorized JavaScript Origins</em> in Google Cloud Console.</li>
+  </ul>
+
+  <h2>PWA Service Worker</h2>
+  <table>
+    <tr><th>URL pattern</th><th>Strategy</th><th>Options</th></tr>
+    <tr><td><code>sheets.googleapis.com/*</code></td><td>NetworkFirst</td><td>10 s timeout; cache: <code>sheets-api</code></td></tr>
+    <tr><td><code>fonts.googleapis.com/*</code>, <code>fonts.gstatic.com/*</code></td><td>CacheFirst</td><td>cache: <code>google-fonts</code></td></tr>
+    <tr><td><code>accounts.google.com/gsi/*</code></td><td>NetworkOnly</td><td>Auth always fresh</td></tr>
+  </table>
+
+  <!-- ─── 14. First-Time Setup ─────────────────────────────────────────────── -->
+  <h1 id="setup">14. First-Time Developer Setup</h1>
+
+  <pre><code># 1. Clone
+git clone https://github.com/JuliaSivridi/Tasks_PWA.git
+cd Tasks_PWA
+
+# 2. Install
+npm install
+
+# 3. Google Cloud Console
+#    a. Create project
+#    b. Enable: Google Sheets API + Google Drive API
+#    c. Create OAuth 2.0 Client ID (Web application)
+#    d. Authorized JS origins: http://localhost:5173
+#    e. Copy the Client ID
+
+# 4. Environment
+echo "VITE_GOOGLE_CLIENT_ID=your_client_id_here" &gt; .env.local
+
+# 5. Run
+npm run dev
+# → http://localhost:5173
+# → Sign in → db_tasks spreadsheet auto-created in your Drive
+
+# 6. Build
+npm run build       # type-check + bundle → dist/
+
+# 7. Vercel deploy (first time)
+npx vercel --prod
+# Set VITE_GOOGLE_CLIENT_ID in Vercel project env vars
+# Add https://your-app.vercel.app to Authorized JS origins in Google Console</code></pre>
+
+  <div class="callout">
+    <strong>Path alias:</strong> <code>@</code> resolves to <code>src/</code> — configured in both <code>vite.config.ts</code> and <code>tsconfig.json</code>.
+  </div>
+
+  <!-- ─── 15. Key Algorithms ───────────────────────────────────────────────── -->
+  <h1 id="algorithms">15. Key Algorithms</h1>
+
+  <h2>ID Generation</h2>
+  <pre><code>generateId(prefix):
+  random = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+  return `${prefix}_${random}`
+  // → 'tsk_a3f8c912'  |  'fld_9b2e1d7c'  |  'lbl_4f03ab21'</code></pre>
+
+  <h2>Deadline Status Classification</h2>
+  <pre><code>getDeadlineStatus(deadlineDate, deadlineTime?):
+  date  = parseISO(deadlineDate)
+  today = startOfDay(now)
+  if date &lt; today:           return 'overdue'
+  if isToday(date):
+    if deadlineTime:
+      deadline = today + HH:MM
+      if deadline &lt; now:     return 'overdue'
+    return 'today'
+  if isTomorrow(date):       return 'tomorrow'
+  diff = differenceInCalendarDays(date, today)
+  if diff &lt;= 7:              return 'week'
+  return 'future'</code></pre>
+
+  <h2>Upcoming Group Builder</h2>
+  <pre><code>useUpcomingGroups():
+  pending = tasks.filter(status='pending' AND deadline_date ≠ '')
+  sorted  = pending.sortBy(deadline_date ASC)
+  today   = startOfDay(now)
+  groups  = Map&lt;key, TaskGroup&gt;
+
+  for task in sorted:
+    isOver = parseISO(task.deadline_date) &lt; today
+    key    = isOver ? 'overdue' : task.deadline_date
+    if key not in groups:
+      groups[key] = {
+        label:     isOver ? 'Overdue' : formatDayGroupLabel(key),
+        isOverdue: isOver,
+        isToday:   !isOver AND key === todayStr,
+        isTomorrow: !isOver AND isTomorrow(parseISO(key)),
+        tasks: []
+      }
+    groups[key].tasks.push(task)
+
+  result = sortBy(groups.values(), isOverdue DESC, key ASC)
+  for group in result:
+    group.tasks.sortBy(deadline_time OR '99:99' ASC)
+  return result</code></pre>
+
+  <h2>Recurring Task Completion</h2>
+  <pre><code>handleComplete(task):
+  if task.is_recurring AND task.deadline_date:
+    nextDate = getNextDueDate(task)
+    // getNextDueDate: addDays / addWeeks / addMonths by recur_value
+    if nextDate:
+      updateTask(task.id, { deadline_date: nextDate })
+      flush()    // immediate — not debounced
+  else:
+    completeTask(task.id)
+    // completeTask sets status='completed', completed_at=now()
+    // also completes all pending subtasks recursively</code></pre>
+
+  <h2>Flush Deduplication</h2>
+  <pre><code>flush():
+  items = getPending()    // status in ['pending','failed'], retryCount &lt; 5
+  if items.length === 0: return
+
+  latestMap = {}
+  for item in items:
+    key = item.entityType + ':' + item.entityId + ':' + item.operationType
+    if key not in latestMap OR item.createdAt &gt; latestMap[key].createdAt:
+      latestMap[key] = item
+
+  // Discard older duplicates (e.g. multiple edits of the same task)
+  for item in items:
+    if item NOT IN latestMap.values: markDone(item.localId)
+
+  // Send only the latest version of each entity+operation
+  for item in latestMap.values:
+    markProcessing → processQueueItem → markDone OR markFailed(n+1)</code></pre>
+
+  <h2>Day Group Header Format</h2>
+  <pre><code>formatDayGroupLabel(dateStr):
+  date = parseISO(dateStr)
+  base = format(date, 'd MMM') + ' · ' + format(date, 'EEEE')
+  if isToday(date):    return base + ' · Today'
+  if isTomorrow(date): return base + ' · Tomorrow'
+  return base
+  // "16 Apr · Thursday · Today"
+  // "17 Apr · Friday · Tomorrow"
+  // "18 Apr · Saturday"</code></pre>
+
+  <h2>DnD Reorder + Reparent</h2>
+  <pre><code>handleDragEnd(active, over, delta):
+  if not over OR active === over: return
+  if delta.x &gt; 50:
+    // Drag-right → make dragged task a subtask of hovered task
+    updateTask(active.id, { parent_id: over.id })
+    scheduleFlush()
+    return
+  // Vertical drag → reorder
+  reordered = arrayMove(localTasks, oldIndex, newIndex)
+  for i, task in enumerate(reordered):
+    updateTask(task.id, { sort_order: i × 10 })
+  scheduleFlush()
+  // sort_order: 0, 10, 20, … leaves room for future insertion</code></pre>
+
+</div><!-- /content -->
+</body>
+</html>
