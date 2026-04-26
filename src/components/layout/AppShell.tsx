@@ -3,6 +3,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { TaskList } from '@/components/tasks/TaskList'
+import { SettingsPage } from '@/components/settings/SettingsPage'
 import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
 import { initialLoad } from '@/services/syncService'
@@ -44,6 +45,9 @@ export function AppShell() {
           <TaskList />
         </main>
       </div>
+
+      {/* Global dialogs */}
+      <SettingsPage />
     </div>
   )
 }

@@ -1,7 +1,7 @@
-import { Menu, LogOut } from 'lucide-react'
+import { Menu, LogOut, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, setSettingsOpen } = useUIStore()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
 
@@ -39,8 +39,25 @@ export function Header() {
       {/* Current view title */}
       <span className="font-semibold text-base">{viewTitle}</span>
 
-      <div className="ml-auto flex items-center gap-2">
-        {/* User avatar */}
+      <div className="ml-auto flex items-center gap-1">
+        {/* Settings button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings size={16} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Settings</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* User avatar dropdown */}
         {user && (
           <TooltipProvider>
             <Tooltip>
@@ -62,6 +79,10 @@ export function Header() {
                       <p className="text-sm font-medium truncate">{user.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
+                    <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                      <Settings size={14} className="mr-2" /> Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout} className="text-destructive">
                       <LogOut size={14} className="mr-2" /> Sign out
                     </DropdownMenuItem>

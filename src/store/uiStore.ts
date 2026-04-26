@@ -9,9 +9,11 @@ interface UIState {
   selectedPriority: string | null
   sidebarOpen: boolean
   createTaskOpen: boolean
+  settingsOpen: boolean
   setView: (view: SelectedView, id?: string) => void
   setSidebarOpen: (v: boolean) => void
   setCreateTaskOpen: (v: boolean) => void
+  setSettingsOpen: (v: boolean) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -21,6 +23,7 @@ export const useUIStore = create<UIState>((set) => ({
   selectedPriority: null,
   sidebarOpen: false,
   createTaskOpen: false,
+  settingsOpen: false,
 
   setView: (view, id) => set({
     selectedView: view,
@@ -31,4 +34,5 @@ export const useUIStore = create<UIState>((set) => ({
 
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setCreateTaskOpen: (v) => set({ createTaskOpen: v }),
+  setSettingsOpen: (v) => set({ settingsOpen: v }),
 }))

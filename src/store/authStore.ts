@@ -13,9 +13,11 @@ interface AuthState {
   tokenExpiry: number | null
   isAuthenticated: boolean
   spreadsheetId: string
+  spreadsheetName: string
   setToken: (token: string, expiresIn: number) => void
   setUser: (user: User) => void
   setSpreadsheetId: (id: string) => void
+  setSpreadsheet: (id: string, name: string) => void
   refreshToken: () => Promise<void>
   logout: () => void
 }
@@ -52,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
       tokenExpiry: null,
       isAuthenticated: false,
       spreadsheetId: '',
+      spreadsheetName: '',
 
       setToken: (token, expiresIn) => {
         set({
@@ -67,6 +70,10 @@ export const useAuthStore = create<AuthState>()(
 
       setSpreadsheetId: (id) => {
         set({ spreadsheetId: id })
+      },
+
+      setSpreadsheet: (id, name) => {
+        set({ spreadsheetId: id, spreadsheetName: name })
       },
 
       refreshToken: () =>
@@ -86,7 +93,7 @@ export const useAuthStore = create<AuthState>()(
         if (token && window.google?.accounts?.oauth2) {
           window.google.accounts.oauth2.revoke(token, () => {})
         }
-        set({ user: null, accessToken: null, tokenExpiry: null, isAuthenticated: false, spreadsheetId: '' })
+        set({ user: null, accessToken: null, tokenExpiry: null, isAuthenticated: false, spreadsheetId: '', spreadsheetName: '' })
       },
     }),
     {
@@ -98,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
         accessToken: state.accessToken,
         tokenExpiry: state.tokenExpiry,
         spreadsheetId: state.spreadsheetId,
+        spreadsheetName: state.spreadsheetName,
       }),
     },
   ),

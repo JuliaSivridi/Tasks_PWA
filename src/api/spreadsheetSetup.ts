@@ -7,10 +7,10 @@ const SPREADSHEET_TITLE = 'db_tasks'
 /**
  * Ensures a spreadsheet named "db_tasks" exists in the user's Google Drive.
  * Priority: authStore.spreadsheetId (localStorage) > Drive search > create new.
- * The found/created spreadsheet ID is saved to authStore (persisted in localStorage).
+ * The found/created spreadsheet ID and name are saved to authStore (persisted in localStorage).
  */
 export async function ensureSpreadsheet(): Promise<void> {
-  const { spreadsheetId, setSpreadsheetId, accessToken } = useAuthStore.getState()
+  const { spreadsheetId, setSpreadsheet, accessToken } = useAuthStore.getState()
 
   // Already have an ID stored locally
   if (spreadsheetId) return
@@ -32,7 +32,7 @@ export async function ensureSpreadsheet(): Promise<void> {
 
   const list = await listRes.json() as { files: { id: string; name: string }[] }
   if (list.files.length > 0) {
-    setSpreadsheetId(list.files[0].id)
+    setSpreadsheet(list.files[0].id, list.files[0].name)
     return
   }
 
@@ -60,5 +60,5 @@ export async function ensureSpreadsheet(): Promise<void> {
   }
 
   const data = await res.json() as { spreadsheetId: string }
-  setSpreadsheetId(data.spreadsheetId)
+  setSpreadsheet(data.spreadsheetId, SPREADSHEET_TITLE)
 }
