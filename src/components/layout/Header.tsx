@@ -1,4 +1,4 @@
-import { Menu, LogOut, Settings } from 'lucide-react'
+import { Menu, LogOut, Settings, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, setSettingsOpen } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, settingsOpen, setSettingsOpen } = useUIStore()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
 
@@ -26,18 +26,32 @@ export function Header() {
 
   return (
     <header className="flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
-      {/* Mobile sidebar toggle */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="md:hidden"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <Menu size={18} />
-      </Button>
+      {settingsOpen ? (
+        /* Back button — replaces hamburger when settings is open */
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSettingsOpen(false)}
+          aria-label="Back"
+        >
+          <ArrowLeft size={18} />
+        </Button>
+      ) : (
+        /* Mobile sidebar toggle */
+        <Button
+          variant="ghost"
+          size="sm"
+          className="md:hidden"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          <Menu size={18} />
+        </Button>
+      )}
 
-      {/* Current view title */}
-      <span className="font-semibold text-base">{viewTitle}</span>
+      {/* Title — "Settings" or current view name */}
+      <span className="font-semibold text-base">
+        {settingsOpen ? 'Settings' : viewTitle}
+      </span>
 
       <div className="ml-auto flex items-center gap-1">
         {/* User avatar dropdown */}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Check, Table2, Loader2 } from 'lucide-react'
+import { Check, Table2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
@@ -57,20 +57,6 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* ── Top bar ───────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-8 h-8 text-muted-foreground hover:text-foreground"
-          onClick={() => setSettingsOpen(false)}
-          aria-label="Back"
-        >
-          <ArrowLeft size={18} />
-        </Button>
-        <span className="font-semibold text-base">Settings</span>
-      </div>
-
       {/* ── Content ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-4 py-6 space-y-2">

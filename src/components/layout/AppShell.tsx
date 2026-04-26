@@ -28,17 +28,21 @@ export function AppShell() {
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar */}
-        <aside className="hidden md:flex flex-col w-60 border-r flex-shrink-0 overflow-hidden">
-          <Sidebar />
-        </aside>
+        {!settingsOpen && (
+          <>
+            {/* Desktop sidebar */}
+            <aside className="hidden md:flex flex-col w-60 border-r flex-shrink-0 overflow-hidden">
+              <Sidebar />
+            </aside>
 
-        {/* Mobile sidebar (drawer) */}
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetContent side="left" className="p-0 w-60">
-            <Sidebar />
-          </SheetContent>
-        </Sheet>
+            {/* Mobile sidebar (drawer) */}
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetContent side="left" className="p-0 w-60">
+                <Sidebar />
+              </SheetContent>
+            </Sheet>
+          </>
+        )}
 
         {/* Main content */}
         <main className="flex-1 overflow-hidden">
