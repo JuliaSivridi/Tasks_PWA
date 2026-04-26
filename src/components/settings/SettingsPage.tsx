@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronDown, ExternalLink, Loader2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ArrowLeft, Check, Table2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
@@ -11,28 +10,22 @@ import { db } from '@/services/db'
 import { cn } from '@/lib/utils'
 
 export function SettingsPage() {
-  const { settingsOpen, setSettingsOpen } = useUIStore()
+  const { setSettingsOpen } = useUIStore()
   const { spreadsheetId, spreadsheetName, setSpreadsheet } = useAuthStore()
 
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerFiles, setPickerFiles] = useState<{ id: string; name: string }[]>([])
+  const [pickerOpen, setPickerOpen]     = useState(false)
+  const [pickerFiles, setPickerFiles]   = useState<{ id: string; name: string }[]>([])
   const [pickerLoading, setPickerLoading] = useState(false)
-  const [pickerError, setPickerError] = useState<string | null>(null)
-  const [switching, setSwitching] = useState(false)
+  const [switching, setSwitching]       = useState(false)
 
   async function handleOpenPicker() {
-    if (pickerOpen) {
-      setPickerOpen(false)
-      return
-    }
+    if (pickerOpen) { setPickerOpen(false); return }
     setPickerOpen(true)
     setPickerLoading(true)
-    setPickerError(null)
     try {
       const files = await listUserSheets()
       setPickerFiles(files)
     } catch {
-      setPickerError('Could not load files from Google Drive')
       setPickerOpen(false)
     } finally {
       setPickerLoading(false)
@@ -45,10 +38,7 @@ export function SettingsPage() {
 
     setSwitching(true)
     try {
-      // 1. Update stored spreadsheet reference
       setSpreadsheet(file.id, file.name)
-
-      // 2. Clear all local data (Dexie + row cache)
       await Promise.all([
         db.tasks.clear(),
         db.folders.clear(),
@@ -56,8 +46,6 @@ export function SettingsPage() {
         db.queue.clear(),
       ])
       invalidateRowCache()
-
-      // 3. Close settings and trigger fresh sync from new spreadsheet
       setSettingsOpen(false)
       await initialLoad()
     } finally {
@@ -68,127 +56,91 @@ export function SettingsPage() {
   const displayName = spreadsheetName || spreadsheetId || '—'
 
   return (
-    <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
-        </DialogHeader>
+    <div className="flex flex-col h-full">
+      {/* ── Top bar ───────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-8 h-8 text-muted-foreground hover:text-foreground"
+          onClick={() => setSettingsOpen(false)}
+          aria-label="Back"
+        >
+          <ArrowLeft size={18} />
+        </Button>
+        <span className="font-semibold text-base">Settings</span>
+      </div>
 
-        <div className="space-y-6 pt-2">
-          {/* ── Spreadsheet section ─────────────────────────────────── */}
-          <div>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Google Spreadsheet</h3>
+      {/* ── Content ───────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-2">
 
-            {/* Current file */}
-            <div className="flex items-center gap-2 mb-3 p-3 rounded-lg bg-muted/50 border border-border">
+          {/* Section label */}
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 mb-3">
+            Spreadsheet
+          </p>
+
+          {/* Sheet row */}
+          <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Table2 size={18} className="text-muted-foreground flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{displayName}</p>
-                {spreadsheetId && (
-                  <p className="text-xs text-muted-foreground truncate font-mono mt-0.5">
-                    {spreadsheetId}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-0.5">Google Sheets data source</p>
               </div>
-              {spreadsheetId && (
-                <a
-                  href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                  title="Open in Google Sheets"
-                >
-                  <ExternalLink size={14} />
-                </a>
-              )}
-            </div>
-
-            {/* Picker trigger */}
-            <div className="relative">
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-between"
+                className="flex-shrink-0 text-xs h-7 px-3"
                 onClick={handleOpenPicker}
                 disabled={switching}
+                aria-expanded={pickerOpen}
               >
-                <span>{switching ? 'Switching…' : 'Change spreadsheet'}</span>
-                {switching
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <ChevronDown size={14} className={cn('transition-transform', pickerOpen && 'rotate-180')} />
-                }
+                {switching ? (
+                  <><Loader2 size={12} className="animate-spin mr-1" />Switching…</>
+                ) : pickerOpen ? 'Cancel' : 'Change'}
               </Button>
-
-              {/* Picker dropdown */}
-              {pickerOpen && (
-                <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-                  {pickerLoading ? (
-                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-                      <Loader2 size={14} className="animate-spin" />
-                      Loading your spreadsheets…
-                    </div>
-                  ) : pickerFiles.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-muted-foreground">
-                      No Google Sheets found in your Drive.
-                    </p>
-                  ) : (
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                      {pickerFiles.map((file) => (
-                        <li key={file.id}>
-                          <button
-                            className={cn(
-                              'w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left',
-                              'hover:bg-muted/60 transition-colors',
-                              file.id === spreadsheetId && 'bg-muted/40',
-                            )}
-                            onClick={() => handlePickFile(file)}
-                          >
-                            <span className="flex-1 truncate">{file.name}</span>
-                            {file.id === spreadsheetId && (
-                              <Check size={13} className="text-primary flex-shrink-0" />
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
             </div>
 
-            {pickerError && (
-              <p className="mt-2 text-xs text-destructive">{pickerError}</p>
+            {/* Picker list */}
+            {pickerOpen && (
+              <div className="border-t border-border">
+                {pickerLoading ? (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                    <Loader2 size={14} className="animate-spin" />
+                    Loading your sheets…
+                  </div>
+                ) : pickerFiles.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-muted-foreground">
+                    No Google Sheets found in your Drive.
+                  </p>
+                ) : (
+                  <ul className="max-h-60 overflow-y-auto">
+                    {pickerFiles.map((file) => (
+                      <li key={file.id}>
+                        <button
+                          className={cn(
+                            'w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left',
+                            'hover:bg-muted/60 transition-colors',
+                            file.id === spreadsheetId && 'bg-muted/40',
+                          )}
+                          onClick={() => handlePickFile(file)}
+                        >
+                          <span className="flex-1 truncate">{file.name}</span>
+                          {file.id === spreadsheetId && (
+                            <Check size={14} className="text-primary flex-shrink-0" />
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
-
-            <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-              All your tasks, folders and labels are stored in a Google Sheets file in your Drive.
-              Switch to a different file to manage separate task lists.
-            </p>
           </div>
 
-          {/* ── Divider ─────────────────────────────────────────────── */}
-          <div className="border-t border-border" />
-
-          {/* ── Open in Sheets shortcut ──────────────────────────────── */}
-          {spreadsheetId && (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Open data source</p>
-                <p className="text-xs text-muted-foreground mt-0.5">View or edit raw data in Google Sheets</p>
-              </div>
-              <a
-                href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <ExternalLink size={13} />
-                  Open
-                </Button>
-              </a>
-            </div>
-          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   )
 }

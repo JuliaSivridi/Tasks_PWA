@@ -40,23 +40,6 @@ export function Header() {
       <span className="font-semibold text-base">{viewTitle}</span>
 
       <div className="ml-auto flex items-center gap-1">
-        {/* Settings button */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <Settings size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Settings</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
         {/* User avatar dropdown */}
         {user && (
           <TooltipProvider>

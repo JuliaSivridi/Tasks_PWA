@@ -11,7 +11,7 @@ import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
 import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
-  const { sidebarOpen, setSidebarOpen } = useUIStore()
+  const { sidebarOpen, setSidebarOpen, settingsOpen } = useUIStore()
   useSync()
 
   useEffect(() => {
@@ -42,12 +42,9 @@ export function AppShell() {
 
         {/* Main content */}
         <main className="flex-1 overflow-hidden">
-          <TaskList />
+          {settingsOpen ? <SettingsPage /> : <TaskList />}
         </main>
       </div>
-
-      {/* Global dialogs */}
-      <SettingsPage />
     </div>
   )
 }
