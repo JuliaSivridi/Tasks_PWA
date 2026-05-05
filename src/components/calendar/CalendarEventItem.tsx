@@ -136,37 +136,38 @@ export function CalendarEventItem({
           {/* Title */}
           <span className="flex-1 text-base leading-snug">{event.title}</span>
 
-          {/* Schedule button (clock icon) — opens focused date/time dialog */}
-          <button
-            onClick={() => setScheduleOpen(true)}
-            className="p-1.5 rounded hover:bg-accent transition-colors flex-shrink-0"
-            title="Edit schedule"
-          >
-            <Clock size={15} className={timeColorClass} />
-          </button>
+          {/* Action buttons — same wrapper as TaskItem mobile to keep alignment */}
+          <div className="flex items-center flex-shrink-0">
+            <button
+              onClick={() => setScheduleOpen(true)}
+              className="p-1.5 rounded hover:bg-accent transition-colors"
+              title="Edit schedule"
+            >
+              <Clock size={15} className={timeColorClass} />
+            </button>
 
-          {/* More button → Edit / Delete */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                title="More options"
-              >
-                <MoreHorizontal size={15} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Pencil size={14} className="mr-2" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 size={14} className="mr-2" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                  title="More options"
+                >
+                  <MoreHorizontal size={15} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil size={14} className="mr-2" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Row 2: time label + calendar icon + calendar name */}
