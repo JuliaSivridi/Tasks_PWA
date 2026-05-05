@@ -54,12 +54,12 @@ Aligns `TaskCreateModal` and `TimePickerDialog` with Android's `TaskFormSheet` (
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| B-01 | `CalendarEvent` + `CalendarItem` TypeScript types | S | [ ] | — |
-| B-02 | Add `calendar` OAuth scope to `authService.ts` | S | [ ] | — |
-| B-03 | `calendarApi.ts` — listCalendars, listEvents, CRUD, getEvent | M | [ ] | B-01, B-02 |
-| B-04 | Dexie v2 schema — add `calendarEvents` table | S | [ ] | B-01 |
-| B-05 | `calendarStore.ts` — Zustand store for events + calendars list | M | [ ] | B-01, B-04 |
-| B-06 | `calendarEnabled` + `enabledCalendarIds` in `prefsStore.ts` | S | [ ] | — |
+| B-01 | `CalendarEvent` + `CalendarItem` TypeScript types | S | [x] | — |
+| B-02 | Add `calendar` OAuth scope to `authService.ts` | S | [x] | — |
+| B-03 | `calendarApi.ts` — listCalendars, listEvents, CRUD, getEvent | M | [x] | B-01, B-02 |
+| B-04 | Dexie v2 schema — add `calendarEvents` table | S | [x] | B-01 |
+| B-05 | `calendarStore.ts` — Zustand store for events + calendars list | M | [x] | B-01, B-04 |
+| B-06 | `calendarEnabled` + `enabledCalendarIds` in `prefsStore.ts` | S | [x] | — |
 
 ### B-01 — CalendarEvent type
 **Create** `src/types/calendarEvent.ts`:

@@ -5,6 +5,7 @@ const SCOPES = [
   'profile',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
+  'https://www.googleapis.com/auth/calendar',
 ].join(' ')
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 

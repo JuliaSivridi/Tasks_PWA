@@ -3,12 +3,14 @@ import type { Task } from '@/types/task'
 import type { Folder } from '@/types/folder'
 import type { Label } from '@/types/label'
 import type { QueueItem } from '@/types/sync'
+import type { CalendarEvent } from '@/types/calendarEvent'
 
 export class TaskManagerDB extends Dexie {
   tasks!: Table<Task>
   folders!: Table<Folder>
   labels!: Table<Label>
   queue!: Table<QueueItem>
+  calendarEvents!: Table<CalendarEvent>
 
   constructor() {
     super('TaskManagerDB')
@@ -17,6 +19,9 @@ export class TaskManagerDB extends Dexie {
       folders: '&id, parent_id',
       labels:  '&id',
       queue:   '++localId, entityType, operationType, status, createdAt',
+    })
+    this.version(2).stores({
+      calendarEvents: '&id, startDate, calendarId',
     })
   }
 }
