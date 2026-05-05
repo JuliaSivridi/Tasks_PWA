@@ -233,10 +233,10 @@ useEffect(() => {
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| F-01 | `useTasks.ts` — `useUpcomingGroupsWithEvents()` + `useCalendarEvents(calendarId)` | M | [ ] | B-01, B-05 |
-| F-02 | `FilterBar` — calendar filter chip + filter matrix logic | M | [ ] | B-01, B-05, F-01 |
-| F-03 | `UpcomingView` — render merged task+event list | S | [ ] | E-01, F-01, F-02 |
-| F-04 | `AllTasksView` — render events merged with tasks | S | [ ] | E-01, F-01, F-02 |
+| F-01 | `useTasks.ts` — `useUpcomingGroupsWithEvents()` + `useCalendarEvents(calendarId)` | M | [x] | B-01, B-05 |
+| F-02 | `FilterBar` — calendar filter chip + filter matrix logic | M | [x] | B-01, B-05, F-01 |
+| F-03 | `UpcomingView` — render merged task+event list | S | [x] | E-01, F-01, F-02 |
+| F-04 | `AllTasksView` — render events merged with tasks | S | [x] | E-01, F-01, F-02 |
 
 ### F-01 — useUpcomingGroupsWithEvents() + useCalendarEvents()
 `src/hooks/useTasks.ts`:
