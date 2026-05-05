@@ -1,6 +1,6 @@
 export type TaskStatus = 'pending' | 'completed' | 'deleted'
 export type Priority = 'urgent' | 'important' | 'normal'
-export type RecurType = 'days' | 'weeks' | 'months'
+export type RecurType = 'days' | 'weeks' | 'months' | 'years'
 
 export interface Task {
   id: string

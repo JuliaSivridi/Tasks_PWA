@@ -11,11 +11,11 @@ Aligns `TaskCreateModal` and `TimePickerDialog` with Android's `TaskFormSheet` (
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| A-01 | Add `'years'` to `recur_type` + RepeatRow "year(s)" option | S | [ ] | — |
-| A-02 | Smart title parsing (`@Folder`, `#Label`, `!1`/`!2`/`!3` tokens) | S | [ ] | — |
-| A-03 | Restructure TASK mode fields: Folder chip → picker dialog; Labels row → LabelPickerSheet; Priority chips | M | [ ] | — |
-| A-04 | Clear + Postpone buttons in TaskCreateModal (edit mode) | S | [ ] | A-01 |
-| A-05 | TimePickerDialog: Clear clears date AND time; hide time/repeat chips when no date selected | S | [ ] | A-01 |
+| A-01 | Add `'years'` to `recur_type` + RepeatRow "year(s)" option | S | [x] | — |
+| A-02 | Smart title parsing (`@Folder`, `#Label`, `!1`/`!2`/`!3` tokens) | S | [x] | — |
+| A-03 | Restructure TASK mode fields: Folder chip → picker dialog; Labels row → LabelPickerSheet; Priority chips | M | [x] | — |
+| A-04 | Clear + Postpone buttons in TaskCreateModal (edit mode) | S | [x] | A-01 |
+| A-05 | TimePickerDialog: Clear clears date AND time; hide time/repeat chips when no date selected | S | [x] | A-01 |
 
 ### A-01 — 'years' recur_type
 - `src/types/task.ts` — add `'years'` to `recur_type` union
