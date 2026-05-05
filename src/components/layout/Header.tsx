@@ -7,13 +7,15 @@ import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
+import { useCalendarStore } from '@/store/calendarStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, settingsOpen, setSettingsOpen } = useUIStore()
+  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId, settingsOpen, setSettingsOpen } = useUIStore()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
+  const { calendars } = useCalendarStore()
 
   const PRIORITY_LABELS: Record<string, string> = { urgent: 'Urgent', important: 'Important', normal: 'Normal' }
 
@@ -22,6 +24,7 @@ export function Header() {
     : selectedView === 'completed' ? 'Completed'
     : selectedView === 'label' ? (labels.find(l => l.id === selectedLabelId)?.name ?? 'Label')
     : selectedView === 'priority' ? (PRIORITY_LABELS[selectedPriority ?? ''] ?? 'Priority')
+    : selectedView === 'calendar' ? (calendars.find(c => c.id === selectedCalendarId)?.summary ?? 'Calendar')
     : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 
   return (

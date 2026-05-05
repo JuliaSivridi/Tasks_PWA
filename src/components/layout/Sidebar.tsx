@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   CalendarClock, CheckCircle2, LayoutList, Inbox, Plus, MoreHorizontal,
   Pencil, Trash2, Folder, RefreshCw, Tag, Flag, ChevronDown, ChevronRight,
+  CalendarDays,
 } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
@@ -9,6 +10,7 @@ import { useTasksStore } from '@/store/tasksStore'
 import { useLabelsStore } from '@/store/labelsStore'
 import { useSyncStore } from '@/store/syncStore'
 import { usePrefsStore } from '@/store/prefsStore'
+import { useCalendarStore } from '@/store/calendarStore'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -119,14 +121,17 @@ const PRIORITIES = [
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export function Sidebar() {
-  const { selectedView, selectedFolderId, selectedLabelId, selectedPriority, setView, setCreateTaskOpen, setSidebarOpen } = useUIStore()
+  const { selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId, setView, setCalendarView, setCreateTaskOpen, setSidebarOpen } = useUIStore()
   const goTo = (...args: Parameters<typeof setView>) => { setView(...args); setSidebarOpen(false) }
+  const goToCalendar = (id: string) => { setCalendarView(id); setSidebarOpen(false) }
   const { folders, addFolder, updateFolder, deleteFolder } = useFoldersStore()
   const { moveTasksToFolder } = useTasksStore()
   const { labels, addLabel, updateLabel, deleteLabel } = useLabelsStore()
   const { stripLabelFromTasks } = useTasksStore()
   const { lastSyncAt, isSyncing } = useSyncStore()
-  const { sectionOpen } = usePrefsStore()
+  const { sectionOpen, calendarEnabled, enabledCalendarIds } = usePrefsStore()
+  const { calendars } = useCalendarStore()
+  const enabledCalendars = calendars.filter(c => enabledCalendarIds.includes(c.id))
 
   // Folder state
   const [creatingFolder, setCreatingFolder] = useState(false)
@@ -249,6 +254,26 @@ export function Sidebar() {
             </div>
           ))}
         </div>
+
+        {/* ── Calendars ── */}
+        {calendarEnabled && enabledCalendars.length > 0 && (
+          <div className="border-t pt-2 space-y-0.5">
+            <SectionHeader label="Calendars" sectionKey="calendars" />
+            {(sectionOpen.calendars ?? true) && enabledCalendars.map(cal => (
+              <button
+                key={cal.id}
+                onClick={() => goToCalendar(cal.id)}
+                className={cn(
+                  'flex items-center gap-1.5 w-full px-2 py-2 rounded-md text-base transition-colors hover:bg-accent',
+                  selectedView === 'calendar' && selectedCalendarId === cal.id && 'bg-accent font-medium text-primary',
+                )}
+              >
+                <CalendarDays size={16} className="flex-shrink-0" style={{ color: cal.color }} />
+                <span className="flex-1 truncate text-left">{cal.summary}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* ── Folders ── */}
         <div className="border-t pt-2 space-y-0.5">

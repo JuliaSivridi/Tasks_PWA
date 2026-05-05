@@ -289,11 +289,11 @@ type MergedItem = { type: 'task'; task: Task } | { type: 'event'; event: Calenda
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| G-01 | `uiStore.ts` — add `'calendar'` view + `selectedCalendarId` | S | [ ] | — |
-| G-02 | `Sidebar.tsx` — Calendars collapsible section | S | [ ] | B-05, B-06, G-01 |
-| G-03 | `Header.tsx` — calendar name as title for calendar view | S | [ ] | G-01 |
-| G-04 | `CalendarEventListView` component in `TaskList.tsx` | M | [ ] | E-01, F-01, G-01 |
-| G-05 | `AppShell.tsx` — render CalendarEventListView for `'calendar'` view | S | [ ] | G-01, G-04 |
+| G-01 | `uiStore.ts` — add `'calendar'` view + `selectedCalendarId` | S | [x] | — |
+| G-02 | `Sidebar.tsx` — Calendars collapsible section | S | [x] | B-05, B-06, G-01 |
+| G-03 | `Header.tsx` — calendar name as title for calendar view | S | [x] | G-01 |
+| G-04 | `CalendarEventListView` component in `TaskList.tsx` | M | [x] | E-01, F-01, G-01 |
+| G-05 | `AppShell.tsx` — render CalendarEventListView for `'calendar'` view | S | [x] | G-01, G-04 |
 
 ### G-01 — 'calendar' in uiStore
 ```ts

@@ -19,7 +19,7 @@ import { TaskItem } from './TaskItem'
 import { TaskCreateModal } from './TaskCreateModal'
 import { CalendarEventItem } from '@/components/calendar/CalendarEventItem'
 import {
-  useUpcomingGroupsWithEvents, useFilteredRootTasks,
+  useUpcomingGroupsWithEvents, useCalendarEvents, useFilteredRootTasks,
   useCompletedTasks, useAllTasks, useLabelTasks, usePriorityTasks,
   type MergedItem,
 } from '@/hooks/useTasks'
@@ -31,7 +31,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { usePrefsStore } from '@/store/prefsStore'
 import { deleteEvent } from '@/api/calendarApi'
 import { pullCalendar, scheduleFlush } from '@/services/syncService'
-import { formatCompletedAt } from '@/utils/dateUtils'
+import { formatCompletedAt, formatDayGroupLabel } from '@/utils/dateUtils'
 import { cn } from '@/lib/utils'
 import type { Task } from '@/types/task'
 import type { CalendarEvent } from '@/types/calendarEvent'
@@ -809,6 +809,89 @@ function CompletedView() {
   )
 }
 
+// ── Calendar event list view — G-04 ──────────────────────────────────────────
+
+function CalendarEventListView() {
+  const { selectedCalendarId } = useUIStore()
+  const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
+  const events = useCalendarEvents(selectedCalendarId ?? '')
+  const { handleDelete, handleDeleteSeries } = useEventHandlers()
+
+  const today = startOfDay(new Date())
+
+  const groups = useMemo(() => {
+    const map = new Map<string, {
+      key: string; label: string; isOverdue: boolean; events: CalendarEvent[]
+    }>()
+
+    for (const event of events) {
+      const date = parseISO(event.startDate)
+      const isOver = isBefore(date, today)
+      const key = isOver ? 'overdue' : event.startDate
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          label: isOver ? 'Overdue' : formatDayGroupLabel(event.startDate),
+          isOverdue: isOver,
+          events: [],
+        })
+      }
+      map.get(key)!.events.push(event)
+    }
+
+    const result = Array.from(map.values())
+    result.sort((a, b) => {
+      if (a.isOverdue) return -1
+      if (b.isOverdue) return 1
+      return a.key.localeCompare(b.key)
+    })
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events])
+
+  if (!calendarEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 p-6 text-center">
+        <CalendarDays size={40} className="opacity-20" />
+        <p className="text-sm">Enable Google Calendar in Settings to see events here.</p>
+      </div>
+    )
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3">
+        <CalendarDays size={40} className="opacity-20" />
+        <p>No events</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      {groups.map(group => (
+        <div key={group.key}>
+          <div className={cn('px-2 py-1 text-sm font-bold mb-1', group.isOverdue ? 'text-red-400' : 'text-muted-foreground')}>
+            {group.label}
+          </div>
+          {group.events.map(event => (
+            <CalendarEventItem
+              key={event.id}
+              event={event}
+              showDate={false}
+              onEdit={() => { /* H-03: TODO */ }}
+              onEditSchedule={() => { /* H-03: TODO */ }}
+              onDelete={() => void handleDelete(event)}
+              onDeleteSeries={() => void handleDeleteSeries(event)}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main TaskList ─────────────────────────────────────────────────────────────
 
 export function TaskList() {
@@ -820,6 +903,7 @@ export function TaskList() {
     if (selectedView === 'label') return <LabelView />
     if (selectedView === 'priority') return <PriorityView />
     if (selectedView === 'completed') return <CompletedView />
+    if (selectedView === 'calendar') return <CalendarEventListView />
     return <FolderView />
   }
 
