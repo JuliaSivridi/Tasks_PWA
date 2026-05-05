@@ -350,10 +350,10 @@ Sidebar stays visible (unlike settings).
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| H-01 | `calendarDateTime.ts` — `buildEventDateTime`, `buildEndDateTime`, `parseEventDateTimeFromDto` | S | [ ] | — |
-| H-02 | `rrule.ts` — `buildRRule`, `parseRRule`, `monthlyOptions` | S | [ ] | — |
-| H-03 | Task/Event mode toggle + EVENT mode fields in `TaskCreateModal` | L | [ ] | B-03, B-05, B-06, H-01, H-02 |
-| H-04 | `submitEvent` + edit recurring dialog + edit-event mode | M | [ ] | H-01, H-02, H-03, B-03, B-05 |
+| H-01 | `calendarDateTime.ts` — `buildEventDateTime`, `buildEndDateTime`, `parseEventDateTimeFromDto` | S | [x] | — |
+| H-02 | `rrule.ts` — `buildRRule`, `parseRRule`, `monthlyOptions` | S | [x] | — |
+| H-03 | Task/Event mode toggle + EVENT mode fields in `TaskCreateModal` | L | [x] | B-03, B-05, B-06, H-01, H-02 |
+| H-04 | `submitEvent` + edit recurring dialog + edit-event mode | M | [x] | H-01, H-02, H-03, B-03, B-05 |
 
 ### H-01 — calendarDateTime utils
 **Create** `src/utils/calendarDateTime.ts`:
