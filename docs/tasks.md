@@ -178,7 +178,7 @@ useEffect(() => {
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| D-01 | Calendars section in `SettingsPage.tsx` | M | [ ] | B-03, B-05, B-06, C-01 |
+| D-01 | Calendars section in `SettingsPage.tsx` | M | [x] | B-03, B-05, B-06, C-01 |
 
 ### D-01 — Calendars section
 `src/components/settings/SettingsPage.tsx` — add below Spreadsheet section (same card style):
