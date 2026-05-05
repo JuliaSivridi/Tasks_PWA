@@ -141,8 +141,8 @@ setEnabledCalendarIds(ids: string[])
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| C-01 | `pullCalendar()` in `syncService.ts` — fetch events into calendarStore + Dexie | M | [ ] | B-03, B-05, B-06 |
-| C-02 | `useSync.ts` — re-pull calendar when `calendarEnabled` flips to true | S | [ ] | C-01 |
+| C-01 | `pullCalendar()` in `syncService.ts` — fetch events into calendarStore + Dexie | M | [x] | B-03, B-05, B-06 |
+| C-02 | `useSync.ts` — re-pull calendar when `calendarEnabled` flips to true | S | [x] | C-01 |
 
 ### C-01 — pullCalendar()
 `src/services/syncService.ts` — add:

@@ -3,10 +3,14 @@ import { fetchAllFolders, appendFolder, updateFolder as apiUpdateFolder, ensureF
 import { fetchAllLabels, appendLabel, updateLabel as apiUpdateLabel, ensureLabelHeader } from '@/api/labelsApi'
 import { getPending, markProcessing, markDone, markFailed, getQueueLength } from '@/services/offlineQueue'
 import { invalidateRowCache } from '@/api/sheetsClient'
+import { listCalendars, listEvents } from '@/api/calendarApi'
 import { useTasksStore } from '@/store/tasksStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
 import { useSyncStore } from '@/store/syncStore'
+import { useCalendarStore } from '@/store/calendarStore'
+import { usePrefsStore } from '@/store/prefsStore'
+import { addDays, startOfDay } from 'date-fns'
 import { now } from '@/utils/dateUtils'
 import type { Task } from '@/types/task'
 import type { Folder } from '@/types/folder'
@@ -72,6 +76,43 @@ export async function flush(): Promise<void> {
   useSyncStore.getState().setPendingCount(pending)
 }
 
+/**
+ * Fetches calendar events for all enabled calendars and updates calendarStore + Dexie.
+ * Guarded by calendarEnabled; on error falls back to the Dexie cache.
+ */
+export async function pullCalendar(): Promise<void> {
+  const { calendarEnabled, enabledCalendarIds } = usePrefsStore.getState()
+  if (!calendarEnabled) return
+
+  const calStore = useCalendarStore.getState()
+  calStore.setLoading(true)
+  try {
+    const today = startOfDay(new Date())
+    const timeMin = today.toISOString()
+    const timeMax = addDays(today, 30).toISOString()
+
+    const cals = await listCalendars()
+    calStore.setCalendars(cals)
+
+    const allEvents = (
+      await Promise.all(
+        enabledCalendarIds.map(id => {
+          const cal = cals.find(c => c.id === id)
+          if (!cal) return Promise.resolve([])
+          return listEvents(id, cal.summary, cal.color, timeMin, timeMax)
+        }),
+      )
+    ).flat()
+
+    await calStore.setEvents(allEvents)
+  } catch (err) {
+    console.error('Calendar sync error', err)
+    await calStore.loadFromDb()
+  } finally {
+    calStore.setLoading(false)
+  }
+}
+
 export async function pull(): Promise<void> {
   const [tasks, folders, labels] = await Promise.all([
     fetchAllTasks(),
@@ -98,6 +139,7 @@ export async function initialLoad(): Promise<void> {
     // Flush any offline changes first, then pull latest
     await flush()
     await pull()
+    await pullCalendar()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     sync.setSyncError(msg)
@@ -139,6 +181,7 @@ export async function fullSync(): Promise<void> {
   try {
     await flush()
     await pull()
+    await pullCalendar()
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     sync.setSyncError(msg)

@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { useSyncStore } from '@/store/syncStore'
-import { fullSync, flush } from '@/services/syncService'
+import { usePrefsStore } from '@/store/prefsStore'
+import { fullSync, flush, pullCalendar } from '@/services/syncService'
 
 export function useSync() {
   const { isOnline, setOnline, lastSyncAt } = useSyncStore()
+  const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
 
   useEffect(() => {
     const handleOnline = () => {
@@ -39,6 +41,11 @@ export function useSync() {
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [setOnline, lastSyncAt])
+
+  // C-02: when the user enables Calendar, fetch immediately
+  useEffect(() => {
+    if (calendarEnabled) void pullCalendar()
+  }, [calendarEnabled])
 
   return { isOnline }
 }
