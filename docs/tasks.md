@@ -199,7 +199,7 @@ useEffect(() => {
 
 | ID | Title | Effort | Status | Deps |
 |----|-------|--------|--------|------|
-| E-01 | `CalendarEventItem.tsx` — event row (icon in checkbox slot, Schedule + MoreHoriz buttons) | M | [ ] | B-01, B-05 |
+| E-01 | `CalendarEventItem.tsx` — event row (icon in checkbox slot, Schedule + MoreHoriz buttons) | M | [x] | B-01, B-05 |
 
 ### E-01 — CalendarEventItem
 **Create** `src/components/calendar/CalendarEventItem.tsx`:
