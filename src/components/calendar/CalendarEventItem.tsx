@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, Clock, MoreHorizontal } from 'lucide-react'
+import { CalendarDays, Clock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -9,25 +9,35 @@ import {
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { cn } from '@/lib/utils'
-import { isToday, isTomorrow, format, parseISO } from 'date-fns'
+import { formatTaskDeadlineLabel, getDeadlineStatus } from '@/utils/dateUtils'
 import type { CalendarEvent } from '@/types/calendarEvent'
 
 // ── Time label helper ────────────────────────────────────────────────────────
 
+/**
+ * Build the time/date label for row 2.
+ *
+ * showDate=false (Upcoming / CalendarView): date is already in the group header,
+ *   so we only show the time range.
+ * showDate=true (AllTasksView): prepend a task-style date label so users can
+ *   identify when the event is without a group header.
+ */
 function buildTimeLabel(event: CalendarEvent, showDate: boolean): string {
   if (!event.isAllDay) {
-    // Timed event: "HH:MM – HH:MM" or "HH:MM"
+    if (showDate) {
+      // Date prefix (Today / Tomorrow / weekday / d MMM) + time range
+      const label = formatTaskDeadlineLabel(event.startDate, event.startTime)
+      return event.endTime ? `${label} – ${event.endTime}` : label
+    }
+    // No date — just time range
     return event.endTime
       ? `${event.startTime} – ${event.endTime}`
       : event.startTime
   }
+
   // All-day event
-  if (!showDate) return ''   // In Upcoming / Calendar views — nothing shown
-  // In AllTasksView (showDate=true): Today / Tomorrow / d MMM
-  const date = parseISO(event.startDate)
-  if (isToday(date)) return 'Today'
-  if (isTomorrow(date)) return 'Tomorrow'
-  return format(date, 'd MMM')
+  if (!showDate) return ''
+  return formatTaskDeadlineLabel(event.startDate)  // Today / Tomorrow / weekday / d MMM
 }
 
 // ── Delete dialog for recurring events ──────────────────────────────────────
@@ -96,13 +106,21 @@ export function CalendarEventItem({
   const isRecurring = event.recurringEventId !== null
 
   const timeLabel = buildTimeLabel(event, showDate)
-  const hasSecondLine = timeLabel !== '' || true   // always show calendar name
+
+  // Apply the same color rules as task deadlines
+  const status = getDeadlineStatus(event.startDate, event.isAllDay ? undefined : event.startTime)
+  const timeColorClass =
+    status === 'overdue'   ? 'text-red-400' :
+    status === 'today'     ? 'text-green-600' :
+    status === 'tomorrow'  ? 'text-orange-400' :
+    status === 'week'      ? 'text-violet-400' :
+    'text-muted-foreground'
 
   return (
     <>
       <div className="flex flex-col hover:bg-accent/40 border-b border-border/40 transition-colors">
         {/* Row 1 */}
-        <div className={cn('flex items-center gap-1.5 px-2', hasSecondLine ? 'pt-2 pb-0.5' : 'py-2')}>
+        <div className="flex items-center gap-1.5 px-2 pt-2 pb-0.5">
 
           {/* Expand spacer (mirrors TaskItem's expand slot) */}
           <span className="w-5 flex-shrink-0" />
@@ -118,7 +136,7 @@ export function CalendarEventItem({
           {/* Title */}
           <span className="flex-1 text-base leading-snug">{event.title}</span>
 
-          {/* Schedule button (clock icon) */}
+          {/* Schedule button (clock icon) — same style as TaskItem action buttons */}
           <button
             onClick={onEditSchedule}
             className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
@@ -139,29 +157,29 @@ export function CalendarEventItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onEdit}>
-                Edit
+                <Pencil size={14} className="mr-2" /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => setDeleteOpen(true)}
               >
-                Delete
+                <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
         {/* Row 2: time label + calendar icon + calendar name */}
-        <div className="flex items-center gap-2 pl-[52px] pr-2 pb-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 pl-[52px] pr-2 pb-2 text-sm">
           {timeLabel && (
-            <span className="font-light">{timeLabel}</span>
+            <span className={cn('font-light', timeColorClass)}>{timeLabel}</span>
           )}
           <CalendarDays
             size={12}
             style={{ color: event.calendarColor }}
             className="flex-shrink-0"
           />
-          <span className="truncate">{event.calendarName}</span>
+          <span className="truncate text-muted-foreground">{event.calendarName}</span>
         </div>
       </div>
 

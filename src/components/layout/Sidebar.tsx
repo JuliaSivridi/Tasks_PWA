@@ -255,26 +255,6 @@ export function Sidebar() {
           ))}
         </div>
 
-        {/* ── Calendars ── */}
-        {calendarEnabled && enabledCalendars.length > 0 && (
-          <div className="border-t pt-2 space-y-0.5">
-            <SectionHeader label="Calendars" sectionKey="calendars" />
-            {(sectionOpen.calendars ?? true) && enabledCalendars.map(cal => (
-              <button
-                key={cal.id}
-                onClick={() => goToCalendar(cal.id)}
-                className={cn(
-                  'flex items-center gap-1.5 w-full px-2 py-2 rounded-md text-base transition-colors hover:bg-accent',
-                  selectedView === 'calendar' && selectedCalendarId === cal.id && 'bg-accent font-medium text-primary',
-                )}
-              >
-                <CalendarDays size={16} className="flex-shrink-0" style={{ color: cal.color }} />
-                <span className="flex-1 truncate text-left">{cal.summary}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* ── Folders ── */}
         <div className="border-t pt-2 space-y-0.5">
           <SectionHeader
@@ -351,6 +331,26 @@ export function Sidebar() {
             </>
           )}
         </div>
+
+        {/* ── Calendars ── (below Folders) */}
+        {calendarEnabled && enabledCalendars.length > 0 && (
+          <div className="border-t pt-2 space-y-0.5">
+            <SectionHeader label="Calendars" sectionKey="calendars" />
+            {(sectionOpen.calendars ?? true) && enabledCalendars.map(cal => (
+              <button
+                key={cal.id}
+                onClick={() => goToCalendar(cal.id)}
+                className={cn(
+                  'flex items-center gap-1.5 w-full px-2 py-2 rounded-md text-base transition-colors hover:bg-accent',
+                  selectedView === 'calendar' && selectedCalendarId === cal.id && 'bg-accent font-medium text-primary',
+                )}
+              >
+                <CalendarDays size={16} className="flex-shrink-0" style={{ color: cal.color }} />
+                <span className="flex-1 truncate text-left">{cal.summary}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
       </div>
 

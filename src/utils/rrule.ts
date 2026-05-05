@@ -58,7 +58,7 @@ export function buildRRule(opts: RRuleOptions): string {
     parts.push(`BYDAY=${opts.byDay.join(',')}`)
   }
 
-  if (opts.freq === 'MONTHLY' && opts.monthlyByDay) {
+  if (opts.freq === 'MONTHLY' && opts.monthlyByDay && opts.monthlyByDay !== 'BY_MONTH_DAY') {
     parts.push(`BYDAY=${opts.monthlyByDay}`)
   }
 
@@ -93,7 +93,7 @@ export function parseRRule(rruleStr: string): ParsedRRule {
 
   // Detect if BYDAY is an ordinal (monthly) or a plain weekday list (weekly)
   let byDay: string[] = []
-  let monthlyByDay = ''
+  let monthlyByDay = freq === 'MONTHLY' ? 'BY_MONTH_DAY' : ''
   if (byDayRaw) {
     // Ordinal tokens contain digits, e.g. "2TU" or "-1SA"
     if (/[-\d]/.test(byDayRaw)) {
@@ -143,7 +143,7 @@ export function monthlyOptions(dateStr: string): MonthlyOption[] {
   const options: MonthlyOption[] = [
     {
       label: `Monthly on day ${dayOfMonth}`,
-      value: '',   // no BYDAY = Google uses BYMONTHDAY
+      value: 'BY_MONTH_DAY',   // sentinel: no BYDAY — Google uses BYMONTHDAY from startDate
     },
     {
       label: `Monthly on the ${ordinalLabel} ${dayName}`,

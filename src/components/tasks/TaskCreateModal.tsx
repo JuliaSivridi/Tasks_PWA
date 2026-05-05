@@ -164,7 +164,7 @@ export function TaskCreateModal({
 
   // Recurrence extras (event mode)
   const [weeklyDays, setWeeklyDays] = useState<string[]>([])
-  const [monthlyByDay, setMonthlyByDay] = useState('')
+  const [monthlyByDay, setMonthlyByDay] = useState('BY_MONTH_DAY')
   const [endsMode, setEndsMode] = useState<RRuleEnds>('NEVER')
   const [endsDate, setEndsDate] = useState('')
   const [endsCount, setEndsCount] = useState(1)
@@ -233,7 +233,7 @@ export function TaskCreateModal({
       setEventStartDateError(false)
       setEventSubmitError(null)
       setWeeklyDays([])
-      setMonthlyByDay('')
+      setMonthlyByDay('BY_MONTH_DAY')
       setEndsMode('NEVER')
       setEndsDate('')
       setEndsCount(1)
@@ -268,7 +268,7 @@ export function TaskCreateModal({
               setValue('recur_type', (freqToType[parsed.freq] as FormValues['recur_type']) ?? 'days')
               setValue('recur_value', parsed.interval)
               setWeeklyDays(parsed.byDay)
-              setMonthlyByDay(parsed.monthlyByDay)
+              setMonthlyByDay(parsed.monthlyByDay || 'BY_MONTH_DAY')
               setEndsMode(parsed.ends)
               setEndsDate(parsed.endDate)
               setEndsCount(parsed.afterCount || 1)
@@ -810,7 +810,7 @@ export function TaskCreateModal({
                                 setWeeklyDays([JS_DAY_TO_TOKEN[jsDow]])
                               }
                               // Reset monthly when switching away
-                              if (v !== 'months') setMonthlyByDay('')
+                              if (v !== 'months') setMonthlyByDay('BY_MONTH_DAY')
                             }}
                           >
                             <SelectTrigger className="w-28 h-8 text-sm">
@@ -919,7 +919,7 @@ export function TaskCreateModal({
                                     onChange={(e) => setEndsCount(Number(e.target.value))}
                                   />
                                 )}
-                                occurrences
+                                {' '}occurrences
                               </span>
                             )}
                           </label>

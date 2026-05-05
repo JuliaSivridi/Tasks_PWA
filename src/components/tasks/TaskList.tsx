@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight, Calendar, Folder, CalendarDays } from 'lucide-react'
+import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight, Calendar, Folder, CalendarDays, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -87,6 +87,7 @@ interface FilterBarProps {
   setFolderFilter: (v: string[]) => void
   calendarFilter: string[]
   setCalendarFilter: (v: string[]) => void
+  onClearAll: () => void
 }
 
 function FilterBar({
@@ -94,16 +95,32 @@ function FilterBar({
   labelFilter, setLabelFilter,
   folderFilter, setFolderFilter,
   calendarFilter, setCalendarFilter,
+  onClearAll,
 }: FilterBarProps) {
   const { labels } = useLabelsStore()
   const { folders } = useFoldersStore()
   const { calendars } = useCalendarStore()
+  const { enabledCalendarIds } = usePrefsStore()
+  const enabledCalendars = calendars.filter(c => enabledCalendarIds.includes(c.id))
 
   const toggle = <T extends string>(arr: T[], id: T, set: (v: T[]) => void) =>
     set(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id])
 
+  const anyActive = priorityFilter.length > 0 || labelFilter.length > 0 || folderFilter.length > 0 || calendarFilter.length > 0
+
   return (
     <div className="flex items-center gap-1 px-3 py-1.5 border-b">
+      {/* Clear all filters button — shown when any filter is active */}
+      {anyActive && (
+        <button
+          onClick={onClearAll}
+          className="p-1.5 rounded transition-colors hover:bg-accent text-muted-foreground hover:text-foreground"
+          title="Clear all filters"
+        >
+          <X size={14} />
+        </button>
+      )}
+
       {/* Priority */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -164,8 +181,8 @@ function FilterBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Calendar chip — F-02: shown when calendars exist */}
-      {calendars.length > 0 && (
+      {/* Calendar chip — only enabled calendars */}
+      {enabledCalendars.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', calendarFilter.length > 0 && 'bg-accent')}>
@@ -173,7 +190,7 @@ function FilterBar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[160px]">
-            {calendars.map(cal => (
+            {enabledCalendars.map(cal => (
               <DropdownMenuItem
                 key={cal.id}
                 onSelect={(e) => { e.preventDefault(); toggle(calendarFilter, cal.id, setCalendarFilter) }}
@@ -209,7 +226,14 @@ function applyCalendarFilterFn(events: CalendarEvent[], calendarFilter: string[]
   return events.filter(e => calendarFilter.includes(e.calendarId))
 }
 
-/** F-02 filter matrix — returns what to show */
+/** F-02 filter matrix — returns what to show.
+ *
+ *  Combined mode: task filters and calendar filter can be active simultaneously.
+ *  - Only cal active  → show calendar events only
+ *  - Only task active → show tasks only
+ *  - Both active      → show both (filtered events + filtered tasks)
+ *  - Neither          → show everything
+ */
 function filterMatrix(
   priorityFilter: string[], labelFilter: string[], folderFilter: string[],
   calendarFilter: string[],
@@ -219,10 +243,8 @@ function filterMatrix(
   return {
     taskActive,
     calActive,
-    // Tasks hidden only when calendar chip is active AND no task filters
-    showTasks: !calActive || taskActive,
-    // Events hidden when any task filter is active
-    showEvents: !taskActive,
+    showTasks: taskActive || !calActive,
+    showEvents: calActive || !taskActive,
   }
 }
 
@@ -322,7 +344,7 @@ function WeekStrip({
 
 // ── Upcoming view — F-03: merged tasks + events ───────────────────────────────
 
-function UpcomingView() {
+function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const groups = useUpcomingGroupsWithEvents()
   const { setCreateTaskOpen } = useUIStore()
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
@@ -447,6 +469,10 @@ function UpcomingView() {
         labelFilter={labelFilter} setLabelFilter={setLabelFilter}
         folderFilter={folderFilter} setFolderFilter={setFolderFilter}
         calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
+        onClearAll={() => {
+          setPriorityFilter([]); setLabelFilter([])
+          setFolderFilter([]); setCalendarFilter([])
+        }}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -471,8 +497,8 @@ function UpcomingView() {
                     key={item.event.id}
                     event={item.event}
                     showDate={false}
-                    onEdit={() => { /* H-03: TODO */ }}
-                    onEditSchedule={() => { /* H-03: TODO */ }}
+                    onEdit={() => onEditCalendarEvent(item.event)}
+                    onEditSchedule={() => onEditCalendarEvent(item.event)}
                     onDelete={() => void handleDelete(item.event)}
                     onDeleteSeries={() => void handleDeleteSeries(item.event)}
                   />
@@ -555,7 +581,7 @@ function FolderView() {
 
 // ── All tasks view — F-04: tasks + events, flat sorted ────────────────────────
 
-function AllTasksView() {
+function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const allTasks = useAllTasks()
   const allEvents = useCalendarStore(s => s.events)
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
@@ -630,6 +656,10 @@ function AllTasksView() {
         labelFilter={labelFilter} setLabelFilter={setLabelFilter}
         folderFilter={folderFilter} setFolderFilter={setFolderFilter}
         calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
+        onClearAll={() => {
+          setPriorityFilter([]); setLabelFilter([])
+          setFolderFilter([]); setCalendarFilter([])
+        }}
       />
       {merged.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -649,8 +679,8 @@ function AllTasksView() {
                 key={(entry.item as CalendarEvent).id}
                 event={entry.item as CalendarEvent}
                 showDate={true}
-                onEdit={() => { /* H-03: TODO */ }}
-                onEditSchedule={() => { /* H-03: TODO */ }}
+                onEdit={() => onEditCalendarEvent(entry.item as CalendarEvent)}
+                onEditSchedule={() => onEditCalendarEvent(entry.item as CalendarEvent)}
                 onDelete={() => void handleDelete(entry.item as CalendarEvent)}
                 onDeleteSeries={() => void handleDeleteSeries(entry.item as CalendarEvent)}
               />
@@ -681,6 +711,10 @@ function LabelView() {
         labelFilter={labelFilter} setLabelFilter={setLabelFilter}
         folderFilter={folderFilter} setFolderFilter={setFolderFilter}
         calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
+        onClearAll={() => {
+          setPriorityFilter([]); setLabelFilter([])
+          setFolderFilter([]); setCalendarFilter([])
+        }}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -749,6 +783,10 @@ function CompletedView() {
         labelFilter={labelFilter} setLabelFilter={setLabelFilter}
         folderFilter={folderFilter} setFolderFilter={setFolderFilter}
         calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
+        onClearAll={() => {
+          setPriorityFilter([]); setLabelFilter([])
+          setFolderFilter([]); setCalendarFilter([])
+        }}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -811,7 +849,7 @@ function CompletedView() {
 
 // ── Calendar event list view — G-04 ──────────────────────────────────────────
 
-function CalendarEventListView() {
+function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const { selectedCalendarId } = useUIStore()
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
   const events = useCalendarEvents(selectedCalendarId ?? '')
@@ -880,8 +918,8 @@ function CalendarEventListView() {
               key={event.id}
               event={event}
               showDate={false}
-              onEdit={() => { /* H-03: TODO */ }}
-              onEditSchedule={() => { /* H-03: TODO */ }}
+              onEdit={() => onEditCalendarEvent(event)}
+              onEditSchedule={() => onEditCalendarEvent(event)}
               onDelete={() => void handleDelete(event)}
               onDeleteSeries={() => void handleDeleteSeries(event)}
             />
@@ -896,14 +934,24 @@ function CalendarEventListView() {
 
 export function TaskList() {
   const { selectedView, createTaskOpen, setCreateTaskOpen } = useUIStore()
+  const [editingCalendarEvent, setEditingCalendarEvent] = useState<CalendarEvent | null>(null)
+
+  const handleEditCalendarEvent = useCallback((event: CalendarEvent) => {
+    setEditingCalendarEvent(event)
+  }, [])
+
+  const handleModalClose = useCallback(() => {
+    setCreateTaskOpen(false)
+    setEditingCalendarEvent(null)
+  }, [setCreateTaskOpen])
 
   const renderContent = () => {
-    if (selectedView === 'upcoming') return <UpcomingView />
-    if (selectedView === 'all') return <AllTasksView />
+    if (selectedView === 'upcoming') return <UpcomingView onEditCalendarEvent={handleEditCalendarEvent} />
+    if (selectedView === 'all') return <AllTasksView onEditCalendarEvent={handleEditCalendarEvent} />
     if (selectedView === 'label') return <LabelView />
     if (selectedView === 'priority') return <PriorityView />
     if (selectedView === 'completed') return <CompletedView />
-    if (selectedView === 'calendar') return <CalendarEventListView />
+    if (selectedView === 'calendar') return <CalendarEventListView onEditCalendarEvent={handleEditCalendarEvent} />
     return <FolderView />
   }
 
@@ -912,7 +960,11 @@ export function TaskList() {
       <div className="flex-1 overflow-y-auto">
         {renderContent()}
       </div>
-      <TaskCreateModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
+      <TaskCreateModal
+        open={createTaskOpen || editingCalendarEvent !== null}
+        editingEvent={editingCalendarEvent}
+        onClose={handleModalClose}
+      />
     </div>
   )
 }
