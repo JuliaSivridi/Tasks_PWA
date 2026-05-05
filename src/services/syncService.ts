@@ -89,7 +89,7 @@ export async function pullCalendar(): Promise<void> {
   try {
     const today = startOfDay(new Date())
     const timeMin = today.toISOString()
-    const timeMax = addDays(today, 365).toISOString()
+    const timeMax = addDays(today, 366).toISOString()
 
     const cals = await listCalendars()
     calStore.setCalendars(cals)

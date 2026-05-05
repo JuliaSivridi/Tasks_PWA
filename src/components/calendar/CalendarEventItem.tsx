@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { EventScheduleDialog } from './EventScheduleDialog'
 import { cn } from '@/lib/utils'
 import { formatTaskDeadlineLabel, getDeadlineStatus } from '@/utils/dateUtils'
 import type { CalendarEvent } from '@/types/calendarEvent'
@@ -89,7 +90,6 @@ export interface CalendarEventItemProps {
   /** Show date in the time label (true in AllTasksView, false in Upcoming/CalendarView) */
   showDate: boolean
   onEdit: () => void
-  onEditSchedule: () => void
   onDelete: () => void
   onDeleteSeries: () => void
 }
@@ -98,11 +98,11 @@ export function CalendarEventItem({
   event,
   showDate,
   onEdit,
-  onEditSchedule,
   onDelete,
   onDeleteSeries,
 }: CalendarEventItemProps) {
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
   const isRecurring = event.recurringEventId !== null
 
   const timeLabel = buildTimeLabel(event, showDate)
@@ -136,13 +136,13 @@ export function CalendarEventItem({
           {/* Title */}
           <span className="flex-1 text-base leading-snug">{event.title}</span>
 
-          {/* Schedule button (clock icon) — same style as TaskItem action buttons */}
+          {/* Schedule button (clock icon) — opens focused date/time dialog */}
           <button
-            onClick={onEditSchedule}
-            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            onClick={() => setScheduleOpen(true)}
+            className="p-1.5 rounded hover:bg-accent transition-colors flex-shrink-0"
             title="Edit schedule"
           >
-            <Clock size={15} />
+            <Clock size={15} className={timeColorClass} />
           </button>
 
           {/* More button → Edit / Delete */}
@@ -201,6 +201,13 @@ export function CalendarEventItem({
           onCancel={() => setDeleteOpen(false)}
         />
       )}
+
+      {/* Schedule dialog — date / time / repeat only */}
+      <EventScheduleDialog
+        event={event}
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+      />
     </>
   )
 }

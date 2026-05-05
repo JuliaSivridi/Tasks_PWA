@@ -498,7 +498,6 @@ function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
                     event={item.event}
                     showDate={false}
                     onEdit={() => onEditCalendarEvent(item.event)}
-                    onEditSchedule={() => onEditCalendarEvent(item.event)}
                     onDelete={() => void handleDelete(item.event)}
                     onDeleteSeries={() => void handleDeleteSeries(item.event)}
                   />
@@ -616,31 +615,43 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
     ? applyCalendarFilterFn(futureEvents, calActive ? calendarFilter : [])
     : []
 
-  // Merge + sort: date+time ascending, no-date tasks at end
+  // Merge + sort: priority first, then date+time; no-date tasks at end
   const merged = useMemo(() => {
-    type Entry = { sortDate: string; sortTime: string; item: typeof filteredTasks[0] | CalendarEvent; isTask: boolean }
+    const PRIORITY_RANK: Record<string, number> = { urgent: 0, important: 1, normal: 2 }
+    type Entry = {
+      sortDate: string; sortTime: string; sortPriority: number
+      item: Task | CalendarEvent; isTask: boolean
+    }
 
     const entries: Entry[] = [
       ...filteredTasks.map(t => ({
         sortDate: t.deadline_date || '9999-12-31',
         sortTime: t.deadline_time || '99:99',
-        item: t,
+        sortPriority: PRIORITY_RANK[t.priority] ?? 2,
+        item: t as Task | CalendarEvent,
         isTask: true,
       })),
       ...filteredEvents.map(e => ({
         sortDate: e.startDate,
         sortTime: e.isAllDay ? '99:99' : e.startTime,
-        item: e,
+        sortPriority: 2,   // events ranked as "normal"
+        item: e as Task | CalendarEvent,
         isTask: false,
       })),
     ]
 
     entries.sort((a, b) => {
-      // Tasks with no deadline go last
+      // Tasks with no deadline always go last
       const aNoDate = a.isTask && !(a.item as Task).deadline_date
       const bNoDate = b.isTask && !(b.item as Task).deadline_date
-      if (aNoDate && !bNoDate) return 1
-      if (!aNoDate && bNoDate) return -1
+      if (aNoDate && bNoDate) return a.sortPriority - b.sortPriority
+      if (aNoDate) return 1
+      if (bNoDate) return -1
+
+      // Dated items: priority first
+      if (a.sortPriority !== b.sortPriority) return a.sortPriority - b.sortPriority
+
+      // Same priority → date then time
       const dc = a.sortDate.localeCompare(b.sortDate)
       if (dc !== 0) return dc
       return a.sortTime.localeCompare(b.sortTime)
@@ -680,7 +691,6 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
                 event={entry.item as CalendarEvent}
                 showDate={true}
                 onEdit={() => onEditCalendarEvent(entry.item as CalendarEvent)}
-                onEditSchedule={() => onEditCalendarEvent(entry.item as CalendarEvent)}
                 onDelete={() => void handleDelete(entry.item as CalendarEvent)}
                 onDeleteSeries={() => void handleDeleteSeries(entry.item as CalendarEvent)}
               />
@@ -919,7 +929,6 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
               event={event}
               showDate={false}
               onEdit={() => onEditCalendarEvent(event)}
-              onEditSchedule={() => onEditCalendarEvent(event)}
               onDelete={() => void handleDelete(event)}
               onDeleteSeries={() => void handleDeleteSeries(event)}
             />
