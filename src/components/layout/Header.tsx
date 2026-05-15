@@ -1,4 +1,4 @@
-import { Menu, LogOut, Settings, ArrowLeft } from 'lucide-react'
+import { Menu, LogOut, Settings, ArrowLeft, HelpCircle, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -12,7 +12,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 export function Header() {
   const { user, logout } = useAuthStore()
-  const { setSidebarOpen, sidebarOpen, selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId, settingsOpen, setSettingsOpen } = useUIStore()
+  const {
+    setSidebarOpen, sidebarOpen,
+    selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId,
+    settingsOpen, setSettingsOpen,
+    helpOpen, setHelpOpen,
+    feedbackOpen, setFeedbackOpen,
+  } = useUIStore()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
   const { calendars } = useCalendarStore()
@@ -27,14 +33,21 @@ export function Header() {
     : selectedView === 'calendar' ? (calendars.find(c => c.id === selectedCalendarId)?.summary ?? 'Calendar')
     : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 
+  const overlayOpen = settingsOpen || helpOpen || feedbackOpen
+  const overlayBack = settingsOpen
+    ? () => setSettingsOpen(false)
+    : helpOpen
+      ? () => setHelpOpen(false)
+      : () => setFeedbackOpen(false)
+
   return (
     <header className="flex items-center gap-3 px-4 h-14 border-b bg-background flex-shrink-0">
-      {settingsOpen ? (
-        /* Back button — replaces hamburger when settings is open */
+      {overlayOpen ? (
+        /* Back button — replaces hamburger when an overlay screen is open */
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setSettingsOpen(false)}
+          onClick={overlayBack}
           aria-label="Back"
         >
           <ArrowLeft size={18} />
@@ -51,9 +64,9 @@ export function Header() {
         </Button>
       )}
 
-      {/* Title — "Settings" or current view name */}
+      {/* Title */}
       <span className="font-semibold text-base">
-        {settingsOpen ? 'Settings' : viewTitle}
+        {settingsOpen ? 'Settings' : helpOpen ? 'Help' : feedbackOpen ? 'Feedback' : viewTitle}
       </span>
 
       <div className="ml-auto flex items-center gap-1">
@@ -81,6 +94,12 @@ export function Header() {
                     </div>
                     <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                       <Settings size={14} className="mr-2" /> Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+                      <HelpCircle size={14} className="mr-2" /> Help
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
+                      <MessageSquare size={14} className="mr-2" /> Feedback
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout} className="text-destructive">

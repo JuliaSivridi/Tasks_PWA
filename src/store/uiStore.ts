@@ -11,11 +11,15 @@ interface UIState {
   sidebarOpen: boolean
   createTaskOpen: boolean
   settingsOpen: boolean
+  helpOpen: boolean
+  feedbackOpen: boolean
   setView: (view: SelectedView, id?: string) => void
   setCalendarView: (calendarId: string) => void
   setSidebarOpen: (v: boolean) => void
   setCreateTaskOpen: (v: boolean) => void
   setSettingsOpen: (v: boolean) => void
+  setHelpOpen: (v: boolean) => void
+  setFeedbackOpen: (v: boolean) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -27,6 +31,8 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarOpen: false,
   createTaskOpen: false,
   settingsOpen: false,
+  helpOpen: false,
+  feedbackOpen: false,
 
   setView: (view, id) => set({
     selectedView: view,
@@ -47,4 +53,6 @@ export const useUIStore = create<UIState>((set) => ({
   setSidebarOpen: (v) => set({ sidebarOpen: v }),
   setCreateTaskOpen: (v) => set({ createTaskOpen: v }),
   setSettingsOpen: (v) => set({ settingsOpen: v }),
+  setHelpOpen: (v) => set({ helpOpen: v }),
+  setFeedbackOpen: (v) => set({ feedbackOpen: v }),
 }))
