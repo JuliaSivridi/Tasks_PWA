@@ -96,7 +96,7 @@ export function Header() {
                       <Settings size={14} className="mr-2" /> Settings
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setHelpOpen(true)}>
-                      <HelpCircle size={14} className="mr-2" /> Short guide
+                      <HelpCircle size={14} className="mr-2" /> Help
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
                       <MessageSquare size={14} className="mr-2" /> Feedback

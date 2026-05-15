@@ -348,6 +348,7 @@ function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
   const groups = useUpcomingGroupsWithEvents()
   const { setCreateTaskOpen } = useUIStore()
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
+  const calendars = useCalendarStore(s => s.calendars)
 
   const [priorityFilter, setPriorityFilter] = useState<string[]>([])
   const [labelFilter, setLabelFilter] = useState<string[]>([])
@@ -497,6 +498,7 @@ function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
                     key={item.event.id}
                     event={item.event}
                     showDate={false}
+                    isEditable={['owner', 'writer'].includes(calendars.find(c => c.id === item.event.calendarId)?.accessRole ?? '')}
                     onEdit={() => onEditCalendarEvent(item.event)}
                     onDelete={() => void handleDelete(item.event)}
                     onDeleteSeries={() => void handleDeleteSeries(item.event)}
@@ -583,6 +585,7 @@ function FolderView() {
 function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const allTasks = useAllTasks()
   const allEvents = useCalendarStore(s => s.events)
+  const calendars = useCalendarStore(s => s.calendars)
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
   const { setCreateTaskOpen } = useUIStore()
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
@@ -690,6 +693,7 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
                 key={(entry.item as CalendarEvent).id}
                 event={entry.item as CalendarEvent}
                 showDate={true}
+                isEditable={['owner', 'writer'].includes(calendars.find(c => c.id === (entry.item as CalendarEvent).calendarId)?.accessRole ?? '')}
                 onEdit={() => onEditCalendarEvent(entry.item as CalendarEvent)}
                 onDelete={() => void handleDelete(entry.item as CalendarEvent)}
                 onDeleteSeries={() => void handleDeleteSeries(entry.item as CalendarEvent)}
@@ -864,6 +868,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
   const events = useCalendarEvents(selectedCalendarId ?? '')
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
+  const calendars = useCalendarStore(s => s.calendars)
 
   const today = startOfDay(new Date())
 
@@ -928,6 +933,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
               key={event.id}
               event={event}
               showDate={false}
+              isEditable={['owner', 'writer'].includes(calendars.find(c => c.id === event.calendarId)?.accessRole ?? '')}
               onEdit={() => onEditCalendarEvent(event)}
               onDelete={() => void handleDelete(event)}
               onDeleteSeries={() => void handleDeleteSeries(event)}

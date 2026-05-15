@@ -89,6 +89,8 @@ export interface CalendarEventItemProps {
   event: CalendarEvent
   /** Show date in the time label (true in AllTasksView, false in Upcoming/CalendarView) */
   showDate: boolean
+  /** Whether the user can edit/delete this event (false for read-only subscribed calendars) */
+  isEditable?: boolean
   onEdit: () => void
   onDelete: () => void
   onDeleteSeries: () => void
@@ -97,6 +99,7 @@ export interface CalendarEventItemProps {
 export function CalendarEventItem({
   event,
   showDate,
+  isEditable = true,
   onEdit,
   onDelete,
   onDeleteSeries,
@@ -137,37 +140,41 @@ export function CalendarEventItem({
           <span className="flex-1 text-base leading-snug">{event.title}</span>
 
           {/* Action buttons — same wrapper as TaskItem mobile to keep alignment */}
-          <div className="flex items-center flex-shrink-0">
-            <button
-              onClick={() => setScheduleOpen(true)}
-              className="p-1.5 rounded hover:bg-accent transition-colors"
-              title="Edit schedule"
-            >
-              <Clock size={15} className={timeColorClass} />
-            </button>
+          {isEditable ? (
+            <div className="flex items-center flex-shrink-0">
+              <button
+                onClick={() => setScheduleOpen(true)}
+                className="p-1.5 rounded hover:bg-accent transition-colors"
+                title="Edit schedule"
+              >
+                <Clock size={15} className={timeColorClass} />
+              </button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                  title="More options"
-                >
-                  <MoreHorizontal size={15} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil size={14} className="mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 size={14} className="mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                    title="More options"
+                  >
+                    <MoreHorizontal size={15} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Pencil size={14} className="mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 size={14} className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="w-[54px] flex-shrink-0" />
+          )}
         </div>
 
         {/* Row 2: time label + calendar icon + calendar name */}
@@ -184,8 +191,8 @@ export function CalendarEventItem({
         </div>
       </div>
 
-      {/* Delete dialogs */}
-      {isRecurring ? (
+      {/* Delete dialogs — only mounted when editable */}
+      {isEditable && (isRecurring ? (
         <RecurringDeleteDialog
           open={deleteOpen}
           onDeleteThis={() => { setDeleteOpen(false); onDelete() }}
@@ -201,14 +208,16 @@ export function CalendarEventItem({
           onConfirm={() => { setDeleteOpen(false); onDelete() }}
           onCancel={() => setDeleteOpen(false)}
         />
-      )}
+      ))}
 
-      {/* Schedule dialog — date / time / repeat only */}
-      <EventScheduleDialog
-        event={event}
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
-      />
+      {/* Schedule dialog — only mounted when editable */}
+      {isEditable && (
+        <EventScheduleDialog
+          event={event}
+          open={scheduleOpen}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
     </>
   )
 }
