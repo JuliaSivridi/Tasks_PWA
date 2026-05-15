@@ -4,6 +4,8 @@ import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { TaskList } from '@/components/tasks/TaskList'
 import { SettingsPage } from '@/components/settings/SettingsPage'
+import { HelpPage } from '@/components/help/HelpPage'
+import { FeedbackPage } from '@/components/feedback/FeedbackPage'
 import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
 import { initialLoad } from '@/services/syncService'
@@ -11,7 +13,7 @@ import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
 import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
-  const { sidebarOpen, setSidebarOpen, settingsOpen } = useUIStore()
+  const { sidebarOpen, setSidebarOpen, settingsOpen, helpOpen, feedbackOpen } = useUIStore()
   useSync()
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function AppShell() {
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
-        {!settingsOpen && (
+        {!settingsOpen && !helpOpen && !feedbackOpen && (
           <>
             {/* Desktop sidebar */}
             <aside className="hidden md:flex flex-col w-60 border-r flex-shrink-0 overflow-hidden">
@@ -46,7 +48,10 @@ export function AppShell() {
 
         {/* Main content */}
         <main className="flex-1 overflow-hidden">
-          {settingsOpen ? <SettingsPage /> : <TaskList />}
+          {helpOpen ? <HelpPage />
+            : feedbackOpen ? <FeedbackPage />
+            : settingsOpen ? <SettingsPage />
+            : <TaskList />}
         </main>
       </div>
     </div>
