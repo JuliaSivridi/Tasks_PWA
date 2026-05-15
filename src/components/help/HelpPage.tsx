@@ -1,5 +1,3 @@
-import { ChevronLeft } from 'lucide-react'
-import { useUIStore } from '@/store/uiStore'
 import { cn } from '@/lib/utils'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -77,21 +75,8 @@ function FeatureTable({ rows }: { rows: TableRow[] }) {
 }
 
 export function HelpPage() {
-  const { setHelpOpen } = useUIStore()
-
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
-        <button
-          onClick={() => setHelpOpen(false)}
-          className="text-foreground hover:text-muted-foreground transition-colors p-0.5 -ml-1"
-          aria-label="Back"
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <span className="text-[1.1rem] font-semibold">Help</span>
-      </div>
-
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-lg mx-auto space-y-6">
 

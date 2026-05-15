@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { ChevronLeft, Send } from 'lucide-react'
-import { useUIStore } from '@/store/uiStore'
+import { Send } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Toast } from '@/components/common/Toast'
 
 const FEEDBACK_URL = import.meta.env.VITE_FEEDBACK_URL as string | undefined
 
 export function FeedbackPage() {
-  const { setFeedbackOpen } = useUIStore()
   const { user } = useAuthStore()
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
@@ -41,17 +39,6 @@ export function FeedbackPage() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border flex-shrink-0">
-        <button
-          onClick={() => setFeedbackOpen(false)}
-          className="text-foreground hover:text-muted-foreground transition-colors p-0.5 -ml-1"
-          aria-label="Back"
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <span className="text-[1.1rem] font-semibold">Feedback</span>
-      </div>
-
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-lg mx-auto flex flex-col gap-3.5">
           {!FEEDBACK_URL ? (

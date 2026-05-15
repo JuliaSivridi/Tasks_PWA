@@ -1,4 +1,4 @@
-import { Menu, LogOut, Settings, ArrowLeft, HelpCircle, MessageSquare } from 'lucide-react'
+import { Menu, LogOut, Settings, ChevronLeft, HelpCircle, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -50,7 +50,7 @@ export function Header() {
           onClick={overlayBack}
           aria-label="Back"
         >
-          <ArrowLeft size={18} />
+          <ChevronLeft size={18} />
         </Button>
       ) : (
         /* Mobile sidebar toggle */
@@ -66,7 +66,7 @@ export function Header() {
 
       {/* Title */}
       <span className="font-semibold text-base">
-        {settingsOpen ? 'Settings' : helpOpen ? 'Help' : feedbackOpen ? 'Feedback' : viewTitle}
+        {settingsOpen ? 'Settings' : helpOpen ? 'Short guide' : feedbackOpen ? 'Feedback' : viewTitle}
       </span>
 
       <div className="ml-auto flex items-center gap-1">
@@ -96,7 +96,7 @@ export function Header() {
                       <Settings size={14} className="mr-2" /> Settings
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setHelpOpen(true)}>
-                      <HelpCircle size={14} className="mr-2" /> Help
+                      <HelpCircle size={14} className="mr-2" /> Short guide
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
                       <MessageSquare size={14} className="mr-2" /> Feedback
