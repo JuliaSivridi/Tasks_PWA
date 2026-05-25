@@ -10,6 +10,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
 import { initialLoad } from '@/services/syncService'
 import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
+import { seedOnboarding } from '@/api/seedOnboarding'
 import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
@@ -18,7 +19,8 @@ export function AppShell() {
 
   useEffect(() => {
     const setup = async () => {
-      await ensureSpreadsheet()
+      const { isNew } = await ensureSpreadsheet()
+      if (isNew) await seedOnboarding()
       await initialLoad()
       await usePrefsStore.getState().load()
     }
