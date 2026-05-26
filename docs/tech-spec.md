@@ -1,6 +1,6 @@
 # Tasks PWA — Technical Specification
 
-> Version 0.0.0 · Branch: main · Generated: 2026-05-26
+> Version 0.0.0 · Branch: main · Generated: 2026-05-27
 
 ---
 
@@ -11,18 +11,17 @@
 3. [Architecture](#3-architecture)
 4. [Package / Folder Structure](#4-package--folder-structure)
 5. [Data Model](#5-data-model)
-6. [Sheets Schema](#6-sheets-schema)
-7. [Local Database (Dexie / IndexedDB)](#7-local-database-dexie--indexeddb)
-8. [Authentication & First-Launch Setup](#8-authentication--first-launch-setup)
-9. [Synchronization & Offline Queue](#9-synchronization--offline-queue)
-10. [UI Views & Components](#10-ui-views--components)
-11. [Onboarding Seed Data](#11-onboarding-seed-data)
-12. [Key Algorithms](#12-key-algorithms)
-13. [Theme & Colors](#13-theme--colors)
-14. [CI/CD](#14-cicd)
-15. [Navigation & Routes](#15-navigation--routes)
-16. [Loading & Empty States](#16-loading--empty-states)
-17. [First-Time Setup (New Developer)](#17-first-time-setup-new-developer)
+6. [Database / Storage Schema](#6-database--storage-schema)
+7. [Authentication & First-Launch Setup](#7-authentication--first-launch-setup)
+8. [Synchronization / API Layer](#8-synchronization--api-layer)
+9. [UI Screens](#9-ui-screens)
+10. [Key Components](#10-key-components)
+11. [Theme & Colors](#11-theme--colors)
+12. [Navigation & Deeplinks](#12-navigation--deeplinks)
+13. [Loading & Empty States](#13-loading--empty-states)
+14. [CI/CD & Build](#14-cicd--build)
+15. [First-Time Setup (New Developer)](#15-first-time-setup-new-developer)
+16. [Key Algorithms](#16-key-algorithms)
 
 ---
 
@@ -334,11 +333,13 @@ Tasks-PWA/
 
 ---
 
-## 6. Sheets Schema
+## 6. Database / Storage Schema
+
+### Google Sheets (remote storage)
 
 The spreadsheet is named `db_tasks`. It has four sheets: `tasks`, `folders`, `labels`, `settings`.
 
-### tasks sheet — range `tasks!A:Q` (17 columns)
+#### tasks sheet — range `tasks!A:Q` (17 columns)
 
 | Col | Index | Header | Type in sheet | Notes |
 |---|---|---|---|---|
@@ -362,7 +363,7 @@ The spreadsheet is named `db_tasks`. It has four sheets: `tasks`, `folders`, `la
 
 Row 1 is the header. Data starts at row 2. Rows are appended via `values:append` and updated via `values/{range}?valueInputOption=RAW` (PUT). Deleted tasks are soft-deleted (status set to `'deleted'`). `ensureHeader()` handles migration: if row length < 16, adds `completed_at`/`is_expanded`; if length < 17, adds `is_expanded`.
 
-### folders sheet — range `folders!A:D` (4 columns)
+#### folders sheet — range `folders!A:D` (4 columns)
 
 | Col | Index | Header | Notes |
 |---|---|---|---|
@@ -371,11 +372,11 @@ Row 1 is the header. Data starts at row 2. Rows are appended via `values:append`
 | C | 2 | color | hex string |
 | D | 3 | sort_order | numeric string |
 
-### labels sheet — range `labels!A:D` (4 columns)
+#### labels sheet — range `labels!A:D` (4 columns)
 
 Same column layout as folders: `id | name | color | sort_order`.
 
-### settings sheet — cell `settings!A1`
+#### settings sheet — cell `settings!A1`
 
 Single cell containing a JSON string. Structure:
 
@@ -391,11 +392,11 @@ Written by `saveSettings()`, read by `loadSettings()`. Falls back to `{}` on err
 
 ---
 
-## 7. Local Database (Dexie / IndexedDB)
+### Local Database — Dexie / IndexedDB
 
 Database name: **`TaskManagerDB`**
 
-### Version 1
+#### Version 1
 
 | Table | Dexie schema string | Notes |
 |---|---|---|
@@ -404,13 +405,13 @@ Database name: **`TaskManagerDB`**
 | labels | `&id` | |
 | queue | `++localId, entityType, operationType, status, createdAt` | `++localId` = auto-increment PK |
 
-### Version 2 (additive migration)
+#### Version 2 (additive migration)
 
 | Table | Dexie schema string | Notes |
 |---|---|---|
 | calendarEvents | `&id, startDate, calendarId` | Added in v2 |
 
-### Index details
+#### Index details
 
 - `tasks.status` — used by `loadFromDb` (`where('status').anyOf(['pending','completed'])`)
 - `tasks.updated_at` — available for future queries
@@ -420,13 +421,13 @@ Database name: **`TaskManagerDB`**
 - `calendarEvents.startDate` — available for date range queries
 - `calendarEvents.calendarId` — available for calendar-scoped queries
 
-### Migration history
+#### Migration history
 
 - **v1 → v2**: adds `calendarEvents` table. Dexie applies additive migrations automatically; no data transformation needed.
 
 ---
 
-## 8. Authentication & First-Launch Setup
+## 7. Authentication & First-Launch Setup
 
 ### Full auth flow (numbered steps)
 
@@ -450,7 +451,7 @@ Database name: **`TaskManagerDB`**
    b. Otherwise: search Google Drive for `name='db_tasks' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`.
    c. If found: call `setSpreadsheet(id, name)` → return `{ isNew: false }`.
    d. If not found: create a new spreadsheet with title `db_tasks` and four sheets: `tasks`, `folders`, `labels`, `settings`. Return `{ isNew: true }`.
-2. If `isNew === true`: call `seedOnboarding()` (see §11).
+2. If `isNew === true`: call `seedOnboarding()`.
 3. `initialLoad()`:
    a. `ensureHeader()` / `ensureFolderHeader()` / `ensureLabelHeader()` — ensures all sheet headers exist.
    b. `flush()` — pushes any queued offline changes.
@@ -463,9 +464,41 @@ Database name: **`TaskManagerDB`**
 
 `sheetsClient.ts` and `calendarApi.ts` both implement automatic token refresh: if a request returns HTTP 401, one refresh attempt is made. If the refresh succeeds, the original request is retried once. A second 401 throws an error.
 
+### Onboarding seed data
+
+`seedOnboarding()` is called once when a brand-new `db_tasks` spreadsheet is created. It writes all data via a single `values:batchUpdate` call with `valueInputOption: 'RAW'`.
+
+**Folders written:**
+
+| ID | Name | Color | sort_order |
+|---|---|---|---|
+| `fld-work` | Work | `#4A90D9` | 1 |
+| `fld-personal` | Personal | `#7ED321` | 2 |
+
+_(The Inbox folder `fld-inbox` is not seeded here; it is created by `ensureInbox()` after `initialLoad`.)_
+
+**Labels written:**
+
+| ID | Name | Color | sort_order |
+|---|---|---|---|
+| `lbl-review` | Review | `#F5A623` | 1 |
+| `lbl-idea` | Idea | `#9B59B6` | 2 |
+
+**Tasks written:**
+
+| ID | Folder | Title | Priority | deadline_date | labels |
+|---|---|---|---|---|---|
+| `tsk-seed-1` | `fld-work` | Make important call | important | (none) | (none) |
+| `tsk-seed-2` | `fld-work` | Review project draft | normal | (none) | `lbl-review` |
+| `tsk-seed-3` | `fld-personal` | Buy groceries | urgent | (none) | (none) |
+| `tsk-seed-4` | `fld-personal` | Schedule dentist appointment | normal | today+5 days | (none) |
+| `tsk-seed-5` | `fld-inbox` | Plan the week | normal | (none) | `lbl-idea` |
+
+All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALSE'`, `is_expanded: 'TRUE'`.
+
 ---
 
-## 9. Synchronization & Offline Queue
+## 8. Synchronization / API Layer
 
 ### Push path (flush) — step-by-step
 
@@ -486,7 +519,7 @@ Database name: **`TaskManagerDB`**
 4. `invalidateRowCache()` — clears the `entityId → sheet row` cache.
 5. Update `syncStore.pendingCount`.
 
-**Debounced flush:** `scheduleFlush()` sets a 800 ms debounce timer. Rapid mutations (e.g., drag-and-drop reorder) are batched. The timer is not blocked by `isSyncing`.
+**Debounced flush:** `scheduleFlush()` sets a 800 ms debounce timer. Rapid mutations (e.g., drag-and-drop reorder) are batched.
 
 ### Pull path
 
@@ -519,7 +552,7 @@ Database name: **`TaskManagerDB`**
 
 ---
 
-## 10. UI Views & Components
+## 9. UI Screens
 
 ### AppShell layout
 
@@ -533,85 +566,77 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 
 ---
 
-### Views (rendered by TaskList)
-
-`TaskList` reads `selectedView` from `uiStore` and renders the matching view:
-
-#### UpcomingView
+### UpcomingView
 
 - **Data:** `useUpcomingGroupsWithEvents()` — all pending tasks with `deadline_date`, plus all calendar events; merged and grouped by day.
 - **Filters:** `priorityFilter`, `labelFilter`, `folderFilter`, `calendarFilter` (all multi-select, applied via `filterMatrix`).
 - **Sort (per group):** items with a time sort earlier than all-day/timeless items; all-day and timeless items use `'99:99'` sentinel.
 - **Layout:** `WeekStrip` (7-day navigation strip at top) + `FilterBar` + scrollable groups. Each day group has a header label. Overdue group is first, coloured red.
-- **Empty state:** centred icon + "No upcoming tasks" + "Add task" ghost button.
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No upcoming tasks" + "Add task" ghost button.
 - **Special features:** `IntersectionObserver` tracks the topmost visible date group and highlights it in the `WeekStrip`. Clicking a day in the strip scrolls to that date's group. Week navigation arrows move the strip; the "Today" button scrolls to today.
 - **User actions:** check task (complete/advance), open `TimePickerDialog`, open `TaskCreateModal` (edit), delete, label/priority pickers inline. For events: edit (opens `TaskCreateModal` in event mode), delete (with recurring choice dialog), edit schedule (opens `EventScheduleDialog`).
 
-#### AllTasksView
+### AllTasksView
 
 - **Data:** `useAllTasks()` (all pending tasks) + calendar events (today to today+366 when `calendarEnabled`).
 - **Filters:** same `FilterBar` with `filterMatrix`.
 - **Sort:** merged list sorted by priority (urgent=0, important=1, normal=2), then date+time, then tasks with no deadline last. Events are ranked as priority 2 (normal).
 - **Layout:** flat list; no grouping. Shows `showDate={true}` on `CalendarEventItem`.
-- **Empty state:** centred icon + "No tasks" + "Add task" ghost button.
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" ghost button.
 
-#### FolderView
+### FolderView
 
 - **Data:** `useFilteredRootTasks()` — pending root tasks (`parent_id === ''`) filtered to `selectedFolderId`. Inbox view includes tasks with `folder_id === ''` too.
 - **Sort:** `sort_order` ascending.
 - **Layout:** `DndContext` + `SortableContext` — tasks are drag-and-drop reorderable via `@dnd-kit`. Dragging right (delta.x > 50 px) re-parents the dragged task under the task it overlaps.
-- **Empty state:** centred icon + "No tasks" + "Add task" button.
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
 - **User actions:** all TaskItem actions; reorder by drag; re-parent by drag-right.
 
-#### LabelView
+### LabelView
 
 - **Data:** `useLabelTasks()` — pending tasks whose `labels` field includes `selectedLabelId`, sorted by priority → deadline → created_at.
 - **Filters:** `FilterBar` (priority, label, folder; calendar filter shown but events not included).
 - **Layout:** flat list; `hideLabels` is true on `TaskItem`.
-- **Empty state:** centred icon + "No tasks" + "Add task" button.
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
 
-#### PriorityView
+### PriorityView
 
 - **Data:** `usePriorityTasks()` — pending tasks with `priority === selectedPriority`, sorted by deadline → created_at.
 - **No filter bar.**
 - **Layout:** flat list; `hideChildren` is true.
-- **Empty state:** centred icon + "No tasks" + "Add task" button.
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
 
-#### CompletedView
+### CompletedView
 
 - **Data:** `useCompletedTasks()` — all tasks with `status === 'completed'`, sorted by `completed_at` or `updated_at` descending.
 - **Filters:** `FilterBar` (priority, label, folder).
 - **Layout:** custom row: strikethrough title, completion datetime, label names, folder name. `RotateCcw` button (restore to pending) and `Trash2` button (hard delete).
-- **Empty state:** centred icon + "No completed tasks".
+- **Empty state:** `FolderOpen size=40 opacity-20` + "No completed tasks".
 - **User actions:** restore task to pending (clears `completed_at`, sets `status: 'pending'`); permanently delete task.
 
-#### CalendarEventListView
+### CalendarEventListView
 
 - **Data:** `useCalendarEvents(selectedCalendarId)` — events for the selected calendar, sorted by `startDate` → `startTime`.
 - **Guard:** if `calendarEnabled === false`, shows a prompt to enable in Settings.
 - **Layout:** grouped by day; each group has a day header. Uses `CalendarEventItem` with `showDate={false}`.
-- **Empty state:** centred icon + "No events".
+- **Empty state:** `CalendarDays size=40 opacity-20` + "No events".
 - **User actions:** edit event (opens `TaskCreateModal`), edit schedule (opens `EventScheduleDialog`), delete (with recurring choice dialog if applicable).
 
----
+### LoginPage
 
-### Page components
-
-#### LoginPage
-
-- Shows app logo (ListTodo icon + title "Tasks"), tagline, and "Sign in with Google" button.
+- Shows app logo (`ListTodo` icon + title "Tasks"), tagline, and "Sign in with Google" button.
 - Button triggers `refreshToken()` from `authStore`. Shows loading state while signing in.
 
-#### SettingsPage
+### SettingsPage
 
 - **Spreadsheet section:** shows current spreadsheet name/ID. "Change" button opens an inline list of all Google Sheets from the user's Drive (`listUserSheets()`). Selecting a different sheet clears Dexie (tasks, folders, labels, queue), invalidates row cache, then runs `initialLoad()`.
 - **Calendars section:** toggle switch for `calendarEnabled`. When enabled, fetches `listCalendars()` and shows each calendar with a checkbox. Toggling a calendar calls `setEnabledCalendarIds()` + `pullCalendar()`. Refresh button re-fetches calendar list. If the Calendar API returns 403, shows a "Grant access" button that triggers `refreshToken()`.
 
-#### HelpPage
+### HelpPage
 
-Static content page with sections: Getting started, Tasks, Views, Calendar & events, Sync & offline, Install as app. Rendered using internal `Card`, `Para`, `List`, `Note`, `FeatureTable`, and `SectionLabel` components defined inline in `HelpPage.tsx`.
+Static content page with sections: Getting started, Tasks, Views, Calendar & events, Sync & offline, Install as app. Rendered using internal `Card`, `Para`, `List`, `Note`, `FeatureTable`, and `SectionLabel` components defined inline in `HelpPage.tsx`. Header title: "Short guide".
 
-#### FeedbackPage
+### FeedbackPage
 
 - Requires `VITE_FEEDBACK_URL` env variable (Google Apps Script URL). If not set, shows "Feedback is not configured yet."
 - Text area for message. Send button POSTs `app=Tasks&email=<userEmail>&message=<text>` to the Apps Script URL with `mode: 'no-cors'`.
@@ -619,9 +644,9 @@ Static content page with sections: Getting started, Tasks, Views, Calendar & eve
 
 ---
 
-### Shared components
+## 10. Key Components
 
-#### TaskItem
+### TaskItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -636,20 +661,20 @@ Static content page with sections: Getting started, Tasks, Views, Calendar & eve
 
 **Layout:** Two-row structure. Row 1: expand chevron | Radix Checkbox | title | action icons. Row 2 (if any of: deadline, labels, folder, recurring, child count): recurring icon, deadline label, label chips, folder chip, child counts (completed/pending/total).
 
-**Desktop actions (md+):** Clock (deadline), Flag (priority picker), Tag (label picker), Plus (add subtask), Pencil (edit), Trash.
+**Desktop actions (md+):** Clock (deadline), Flag (priority picker), Tag (label picker), Plus (add subtask), Pencil (edit), Trash.  
 **Mobile actions:** Clock + `MoreHorizontal` dropdown with submenus for Priority, Labels, Add subtask, Edit, Delete.
 
 **Deadline colors:** overdue → `text-red-400`, today → `text-green-600`, tomorrow → `text-orange-400`, week (2–7 days) → `text-violet-400`, future → `text-muted-foreground`.
 
 **Complete handler for recurring tasks:** calls `updateTask(id, { deadline_date: nextDate })` + immediate `flush()`. Does NOT call `completeTask`.
 
-#### TaskChildren
+### TaskChildren
 
 **Props:** `tasks: Task[]`, `depth: number`, `showFolder?: boolean`.
 
 Renders a `DndContext` + `SortableContext` (vertical list). Drag-and-drop reorders `sort_order` (× 10 spacing). Drag-right (delta.x > 50) re-parents.
 
-#### TaskCreateModal
+### TaskCreateModal
 
 **Props:** `open: boolean`, `editing?: Task | null`, `editingEvent?: CalendarEvent | null`, `parentId?: string`, `onClose: () => void`.
 
@@ -661,13 +686,13 @@ Two modes: **task mode** and **event mode**. A toggle tab appears when creating 
 
 On submit (event): if editing a recurring instance and no `recurringChoice` given, shows `EditRecurringDialog` offering "Edit this event only" or "Edit all events in series".
 
-#### TimePickerDialog
+### TimePickerDialog
 
 **Props:** `open: boolean`, `task: Task`, `onClose: () => void`.
 
 Focused deadline/recurrence editor. Fields: date, time (hidden when no date), repeat checkbox + interval + type (hidden when no date). Clear button clears date/time/recurrence. Postpone button advances deadline by one recurrence interval.
 
-#### CalendarEventItem
+### CalendarEventItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -678,223 +703,43 @@ Focused deadline/recurrence editor. Fields: date, time (hidden when no date), re
 | onDelete | () => void | required | |
 | onDeleteSeries | () => void | required | |
 
-Two-row layout mirroring `TaskItem`. Row 1: spacer | CalendarDays icon | title | Clock button + `...` dropdown (Edit, Delete). Row 2: time label | CalendarDays icon | calendar name.
+Two-row layout mirroring `TaskItem`. Row 1: spacer | `CalendarDays` icon | title | Clock button + `...` dropdown (Edit, Delete). Row 2: time label | `CalendarDays` icon | calendar name.
 
-Delete: if recurring, shows `RecurringDeleteDialog`; otherwise `ConfirmDialog`. Clock button opens `EventScheduleDialog`. Read-only calendars (`isEditable === false`): no action buttons, no dialogs.
+Delete: if recurring, shows `RecurringDeleteDialog`; otherwise `ConfirmDialog`. Clock button opens `EventScheduleDialog`. Read-only calendars (`isEditable === false`): no action buttons, replaced with a `w-[54px]` spacer so titles align with editable events.
 
-#### EventScheduleDialog
+### EventScheduleDialog
 
 **Props:** `event: CalendarEvent`, `open: boolean`, `onClose: () => void`.
 
 Date chip, start/end time chips, repeat section (weekly day buttons, monthly pattern select, ends options). Loads existing RRULE from the recurring base event on open. For recurring instances, shows `RecurringChoiceDialog` on save.
 
-#### ConfirmDialog
+### ConfirmDialog
 
 **Props:** `open`, `title`, `description?`, `confirmLabel?` (default `'Delete'`), `onConfirm`, `onCancel`. Standard dialog with Cancel (outline) + Confirm (destructive) buttons.
 
-#### SyncStatusBanner
+### SyncStatusBanner
 
 Reads `isOnline`, `isSyncing`, `pendingCount`, `syncError` from `syncStore`. Renders nothing when online and idle. Three variants: Offline (amber, shows pending count), Syncing (blue, spinning icon), Error (red, "Retry" link).
 
-#### Toast
+### Toast
 
 **Props:** `message: string`, `onDone: () => void`, `duration?: number` (default 2800 ms). Fixed bottom-center toast that auto-dismisses. Uses `animate-in fade-in slide-in-from-bottom-2`.
 
-#### DeadlineBadge
+### DeadlineBadge
 
-**Props:** `deadlineDate: string`, `deadlineTime: string`. Returns null if no date. Shows formatted date label; red if overdue, blue if today. (Not used in main task list views.)
+**Props:** `deadlineDate: string`, `deadlineTime: string`. Returns null if no date. Shows formatted date label; red if overdue, blue if today.
 
-#### PriorityBadge
+### PriorityBadge
 
-**Props:** `priority: Priority`. Returns null for `normal`. Shows Russian labels: Срочно (urgent, red), Важно (important, amber). (Not used in main task list views.)
+**Props:** `priority: Priority`. Returns null for `normal`. Shows Russian labels: Срочно (urgent, red), Важно (important, amber).
 
-#### LabelBadge
+### LabelBadge
 
 **Props:** `labelId: string`. Looks up label by ID from `labelsStore`. Returns null if not found. Colored rounded-full pill.
 
 ---
 
-## 11. Onboarding Seed Data
-
-`seedOnboarding()` is called once when a brand-new `db_tasks` spreadsheet is created. It writes all data via a single `values:batchUpdate` call with `valueInputOption: 'RAW'`.
-
-### Folders written
-
-| ID | Name | Color | sort_order |
-|---|---|---|---|
-| `fld-work` | Work | `#4A90D9` | 1 |
-| `fld-personal` | Personal | `#7ED321` | 2 |
-
-_(The Inbox folder `fld-inbox` is not seeded here; it is created by `ensureInbox()` after `initialLoad`.)_
-
-### Labels written
-
-| ID | Name | Color | sort_order |
-|---|---|---|---|
-| `lbl-review` | Review | `#F5A623` | 1 |
-| `lbl-idea` | Idea | `#9B59B6` | 2 |
-
-### Tasks written
-
-| ID | Folder | Title | Priority | deadline_date | labels |
-|---|---|---|---|---|---|
-| `tsk-seed-1` | `fld-work` | Make important call | important | (none) | (none) |
-| `tsk-seed-2` | `fld-work` | Review project draft | normal | (none) | `lbl-review` |
-| `tsk-seed-3` | `fld-personal` | Buy groceries | urgent | (none) | (none) |
-| `tsk-seed-4` | `fld-personal` | Schedule dentist appointment | normal | today+5 days | (none) |
-| `tsk-seed-5` | `fld-inbox` | Plan the week | normal | (none) | `lbl-idea` |
-
-All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALSE'`, `is_expanded: 'TRUE'`.
-
----
-
-## 12. Key Algorithms
-
-### Recurring task advancement (recurrenceService)
-
-```
-function getNextDueDate(task):
-  if not task.is_recurring or not task.deadline_date: return null
-  base = parseISO(task.deadline_date)
-  switch task.recur_type:
-    'days'   → next = addDays(base, task.recur_value)
-    'weeks'  → next = addWeeks(base, task.recur_value)
-    'months' → next = addMonths(base, task.recur_value)
-    'years'  → next = addYears(base, task.recur_value)
-    default  → return null
-  return format(next, 'yyyy-MM-dd')
-
-// Called in TaskItem.handleComplete when task.is_recurring && task.deadline_date:
-nextDate = getNextDueDate(task)
-if nextDate:
-  updateTask(task.id, { deadline_date: nextDate })
-  flush()          // immediate, not debounced
-// Task stays pending with the advanced deadline date.
-```
-
-### RRULE building (rrule.ts — buildRRule)
-
-```
-function buildRRule(opts):
-  parts = ["FREQ=" + opts.freq]
-  if opts.interval > 1:
-    parts.push("INTERVAL=" + opts.interval)
-  if opts.freq == 'WEEKLY' and opts.byDay.length > 0:
-    parts.push("BYDAY=" + opts.byDay.join(','))
-  if opts.freq == 'MONTHLY' and opts.monthlyByDay and opts.monthlyByDay != 'BY_MONTH_DAY':
-    parts.push("BYDAY=" + opts.monthlyByDay)
-  if opts.ends == 'ON_DATE' and opts.endDate:
-    until = opts.endDate.replace(/-/g,'') + 'T000000Z'
-    parts.push("UNTIL=" + until)
-  else if opts.ends == 'AFTER_COUNT' and opts.afterCount:
-    parts.push("COUNT=" + opts.afterCount)
-  return "RRULE:" + parts.join(';')
-
-// Example output: "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE"
-```
-
-### Offline queue deduplication (syncService.flush)
-
-```
-function flush():
-  items = getPending()  // status IN ('pending','failed'), retryCount < 5, sorted by createdAt
-  if items.length == 0: return
-
-  latestMap = Map<string, QueueItem>()
-  // key = "entityType:entityId:operationType"
-  for item in items:
-    key = item.entityType + ':' + item.entityId + ':' + item.operationType
-    existing = latestMap.get(key)
-    if not existing or item.createdAt > existing.createdAt:
-      latestMap.set(key, item)
-
-  latestIds = Set(latestMap.values().map(i => i.localId))
-
-  for item in items:
-    if item.localId not in latestIds:
-      markDone(item.localId)   // discard superseded
-
-  for item in latestMap.values():
-    markProcessing(item.localId)
-    try:
-      processQueueItem(item)   // Sheets API call
-      markDone(item.localId)
-    catch err:
-      markFailed(item.localId, item.retryCount + 1)
-
-  invalidateRowCache()
-  pendingCount = getQueueLength()
-  syncStore.setPendingCount(pendingCount)
-```
-
-### Mixed task+event sort (AllTasksView)
-
-```
-// Build entries:
-// task entry: { sortDate = deadline_date || '9999-12-31',
-//               sortTime = deadline_time || '99:99',
-//               sortPriority = {urgent:0,important:1,normal:2}[priority],
-//               isTask = true }
-// event entry: { sortDate = startDate,
-//                sortTime = isAllDay ? '99:99' : startTime,
-//                sortPriority = 2,
-//                isTask = false }
-
-sort(entries):
-  aNoDate = isTask and no deadline_date
-  bNoDate = ...
-  if aNoDate and bNoDate: return a.sortPriority - b.sortPriority
-  if aNoDate: return +1    // tasks without dates always last
-  if bNoDate: return -1
-  if a.sortPriority != b.sortPriority: return a.sortPriority - b.sortPriority
-  dc = a.sortDate.localeCompare(b.sortDate)
-  if dc != 0: return dc
-  return a.sortTime.localeCompare(b.sortTime)
-```
-
-### Smart title parsing (smartTitle.ts — parseSmartTitle)
-
-```
-function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority):
-  title = raw
-  folderId = currentFolderId
-  labelIds = new Set(currentLabelIds)
-  priority = currentPriority
-
-  // @FolderName → case-insensitive match; first match wins; unmatched stays in title
-  title = title.replace(/@(\S+)/g, (match, name) =>
-    folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
-    if folder: folderId = folder.id; return ''
-    return match
-  )
-
-  // #LabelName → case-insensitive match; adds to labelIds; unmatched stays in title
-  title = title.replace(/#(\S+)/g, (match, name) =>
-    label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
-    if label: labelIds.add(label.id); return ''
-    return match
-  )
-
-  // !1 → urgent, !2 → important, !3 → normal
-  title = title.replace(/!([123])/g, (match, digit) =>
-    switch digit:
-      '1': priority = 'urgent'
-      '2': priority = 'important'
-      '3': priority = 'normal'
-    return ''
-  )
-
-  return {
-    title: title.replace(/\s{2,}/g, ' ').trim(),
-    folderId,
-    labelsStr: Array.from(labelIds).join(','),
-    priority,
-  }
-```
-
----
-
-## 13. Theme & Colors
+## 11. Theme & Colors
 
 ### CSS custom properties (index.css)
 
@@ -952,7 +797,7 @@ function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds,
 - `darkMode: 'media'` — responds to OS preference
 - `fontSize.xs` and `fontSize.sm` both overridden to `['1rem', { lineHeight: '1.5rem' }]`
 - `borderRadius.lg` → `var(--radius)`, `.md` → `calc(var(--radius) - 2px)`, `.sm` → `calc(var(--radius) - 4px)`
-- All color tokens (`background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `chart.1`–`chart.5`) mapped to `hsl(var(--TOKEN))`
+- All color tokens mapped to `hsl(var(--TOKEN))`
 - Plugin: `tailwindcss-animate`
 
 ### Priority colors (hardcoded in components)
@@ -973,13 +818,7 @@ function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds,
 
 ---
 
-## 14. CI/CD
-
-No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase. Build is run manually with `npm run build` (`tsc -b && vite build`). Preview with `npm run preview`.
-
----
-
-## 15. Navigation & Routes
+## 12. Navigation & Deeplinks
 
 The app has **no URL-based router**. All navigation is managed by `uiStore` (Zustand, in-memory only — not persisted). There are no route strings, no `react-router`, and no `history` API usage.
 
@@ -1003,27 +842,25 @@ type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'comp
 
 ### Overlay screens
 
-Overlay screens are boolean flags in `uiStore`, not views. They render over the main content:
+Overlay screens are boolean flags in `uiStore`, rendered over the main content. When any is open, the sidebar and `TaskList` are hidden; the header shows a `ChevronLeft` back button.
 
-| Flag | Screen rendered |
-|------|----------------|
-| `settingsOpen` | `<SettingsPage />` |
-| `helpOpen` | `<HelpPage />` |
-| `feedbackOpen` | `<FeedbackPage />` |
-
-When any overlay is open, the sidebar and `<TaskList>` are hidden (`AppShell.tsx` line 33: `{!settingsOpen && !helpOpen && !feedbackOpen && ...}`). The header shows a `<ChevronLeft>` back button instead of the hamburger.
+| Flag | Screen rendered | Header title |
+|------|----------------|--------------|
+| `settingsOpen` | `<SettingsPage />` | "Settings" |
+| `helpOpen` | `<HelpPage />` | "Short guide" |
+| `feedbackOpen` | `<FeedbackPage />` | "Feedback" |
 
 ### Default view
 
-`selectedView` initialises to `'upcoming'` (uiStore default). There is no persisted last-view state.
+`selectedView` initialises to `'upcoming'`. There is no persisted last-view state.
 
 ### Deeplinks
 
-There are no deeplink URI schemes or URL parameters. The app is always served from `/` (single-page, no routing).
+There are no deeplink URI schemes or URL parameters. The app is always served from `/`.
 
 ---
 
-## 16. Loading & Empty States
+## 13. Loading & Empty States
 
 ### Global sync banner (`SyncStatusBanner.tsx`)
 
@@ -1031,30 +868,34 @@ Rendered above the main content area. Hidden when `isOnline && !isSyncing && pen
 
 | Condition | Background | Icon | Text |
 |-----------|-----------|------|------|
-| `!isOnline` | `bg-amber-50 border-amber-200 text-amber-700` | `WifiOff size=14` | `"Offline"` or `"Offline · N changes pending"` |
-| `syncError` | `bg-red-50 border-red-200 text-red-700` | `AlertCircle size=14` | `"Sync error"` + "Retry" link (calls `fullSync()`) |
-| `isSyncing` | `bg-blue-50 border-blue-200 text-blue-700` | `RefreshCw size=14 animate-spin` | `"Syncing..."` |
+| `!isOnline` | `bg-amber-50 border-amber-200 text-amber-700` | `WifiOff size=14` | "Offline" or "Offline · N changes pending" |
+| `syncError` | `bg-red-50 border-red-200 text-red-700` | `AlertCircle size=14` | "Sync error" + "Retry" link → `fullSync()` |
+| `isSyncing` | `bg-blue-50 border-blue-200 text-blue-700` | `RefreshCw size=14 animate-spin` | "Syncing..." |
 
 ### Per-view empty states
 
-No skeleton/shimmer animations exist in the app. Loading progress is shown only via `SyncStatusBanner`.
+No skeleton/shimmer animations exist. Loading progress is shown only via `SyncStatusBanner`. All empty containers use `flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3`.
 
 | View | Icon | Message | Action button |
 |------|------|---------|---------------|
-| UpcomingView | `FolderOpen size=40 opacity-20` | `"No upcoming tasks"` | `"+ Add task"` → `setCreateTaskOpen(true)` |
-| FolderView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
-| AllTasksView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
-| LabelView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
-| PriorityView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
-| CompletedView | `FolderOpen size=40 opacity-20` | `"No completed tasks"` | — |
-| CalendarEventListView (calendar disabled) | `CalendarDays size=40 opacity-20` | `"Enable Google Calendar in Settings to see events here."` | — |
-| CalendarEventListView (no events) | `CalendarDays size=40 opacity-20` | `"No events"` | — |
-
-All empty state containers use: `flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3`.
+| UpcomingView | `FolderOpen size=40 opacity-20` | "No upcoming tasks" | "+ Add task" → `setCreateTaskOpen(true)` |
+| FolderView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
+| AllTasksView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
+| LabelView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
+| PriorityView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
+| CompletedView | `FolderOpen size=40 opacity-20` | "No completed tasks" | — |
+| CalendarEventListView (disabled) | `CalendarDays size=40 opacity-20` | "Enable Google Calendar in Settings to see events here." | — |
+| CalendarEventListView (no events) | `CalendarDays size=40 opacity-20` | "No events" | — |
 
 ---
 
-## 17. First-Time Setup (New Developer)
+## 14. CI/CD & Build
+
+No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase. Build is run manually with `npm run build` (`tsc -b && vite build`). Preview with `npm run preview`.
+
+---
+
+## 15. First-Time Setup (New Developer)
 
 ### Prerequisites
 
@@ -1087,21 +928,18 @@ cp .env.example .env
    - Application type: **Web application**
    - Authorized JavaScript origins: `http://localhost:5173`
    - Authorized redirect URIs: `http://localhost:5173`
-4. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) into `.env`:
+4. Copy the **Client ID** into `.env`:
    ```
    VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
    ```
 
 **4. (Optional) Feedback endpoint**
 
-Deploy a Google Apps Script that appends rows to a sheet:
-- Script should accept POST with `{ app, email, message }` and append `[timestamp, app, email, message]`.
-- Deploy as **Web app** (Execute as: Me, Access: Anyone).
-- Copy the deployment URL into `.env`:
-  ```
-  VITE_FEEDBACK_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-  ```
-  If omitted, the Feedback page submits silently to nothing.
+Deploy a Google Apps Script that appends `[timestamp, app, email, message]` to a sheet. Deploy as Web app (Execute as: Me, Access: Anyone). Copy the URL into `.env`:
+```
+VITE_FEEDBACK_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+```
+If omitted, the Feedback page submits silently without error.
 
 **5. Run locally**
 ```bash
@@ -1109,16 +947,152 @@ npm run dev
 # → http://localhost:5173
 ```
 
-**6. First sign-in**
-- Click "Sign in with Google" → Google Identity Services popup.
-- On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Google Sheets file is created and seeded with sample data via `seedOnboarding()`.
-- The spreadsheet ID is cached in `localStorage` (`auth-storage`) so subsequent loads skip the Drive search.
+**6. First sign-in** — Click "Sign in with Google". On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Sheets file is created and seeded with sample data via `seedOnboarding()`. The spreadsheet ID is cached in `localStorage` (`auth-storage`).
 
 ### Available scripts
 
 | Script | Command | Description |
 |--------|---------|-------------|
-| `dev` | `vite` | Dev server at `:5173` with HMR |
+| `dev` | `vite` | Dev server at :5173 with HMR |
 | `build` | `tsc -b && vite build` | Type-check + production bundle → `dist/` |
 | `preview` | `vite preview` | Serve production build locally |
 | `lint` | `eslint .` | Run ESLint |
+
+---
+
+## 16. Key Algorithms
+
+### Recurring task advancement (recurrenceService)
+
+```
+function getNextDueDate(task):
+  if not task.is_recurring or not task.deadline_date: return null
+  base = parseISO(task.deadline_date)
+  switch task.recur_type:
+    'days'   → next = addDays(base, task.recur_value)
+    'weeks'  → next = addWeeks(base, task.recur_value)
+    'months' → next = addMonths(base, task.recur_value)
+    'years'  → next = addYears(base, task.recur_value)
+    default  → return null
+  return format(next, 'yyyy-MM-dd')
+
+// Called in TaskItem.handleComplete when task.is_recurring && task.deadline_date:
+nextDate = getNextDueDate(task)
+if nextDate:
+  updateTask(task.id, { deadline_date: nextDate })
+  flush()          // immediate, not debounced
+// Task stays pending with the advanced deadline date.
+```
+
+### RRULE building (rrule.ts — buildRRule)
+
+```
+function buildRRule(opts):
+  parts = ["FREQ=" + opts.freq]
+  if opts.interval > 1:
+    parts.push("INTERVAL=" + opts.interval)
+  if opts.freq == 'WEEKLY' and opts.byDay.length > 0:
+    parts.push("BYDAY=" + opts.byDay.join(','))
+  if opts.freq == 'MONTHLY' and opts.monthlyByDay and opts.monthlyByDay != 'BY_MONTH_DAY':
+    parts.push("BYDAY=" + opts.monthlyByDay)
+  if opts.ends == 'ON_DATE' and opts.endDate:
+    until = opts.endDate.replace(/-/g,'') + 'T000000Z'
+    parts.push("UNTIL=" + until)
+  else if opts.ends == 'AFTER_COUNT' and opts.afterCount:
+    parts.push("COUNT=" + opts.afterCount)
+  return "RRULE:" + parts.join(';')
+
+// Example output: "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE"
+```
+
+### Offline queue deduplication (syncService.flush)
+
+```
+function flush():
+  items = getPending()  // status IN ('pending','failed'), retryCount < 5, sorted by createdAt
+  if items.length == 0: return
+
+  latestMap = Map<string, QueueItem>()
+  for item in items:
+    key = item.entityType + ':' + item.entityId + ':' + item.operationType
+    existing = latestMap.get(key)
+    if not existing or item.createdAt > existing.createdAt:
+      latestMap.set(key, item)
+
+  latestIds = Set(latestMap.values().map(i => i.localId))
+
+  for item in items:
+    if item.localId not in latestIds:
+      markDone(item.localId)   // discard superseded
+
+  for item in latestMap.values():
+    markProcessing(item.localId)
+    try:
+      processQueueItem(item)   // Sheets API call
+      markDone(item.localId)
+    catch err:
+      markFailed(item.localId, item.retryCount + 1)
+
+  invalidateRowCache()
+  pendingCount = getQueueLength()
+  syncStore.setPendingCount(pendingCount)
+```
+
+### Mixed task+event sort (AllTasksView)
+
+```
+// task entry: { sortDate = deadline_date || '9999-12-31',
+//               sortTime = deadline_time || '99:99',
+//               sortPriority = {urgent:0, important:1, normal:2}[priority] }
+// event entry: { sortDate = startDate,
+//                sortTime = isAllDay ? '99:99' : startTime,
+//                sortPriority = 2 }
+
+sort(entries):
+  aNoDate = isTask and no deadline_date
+  bNoDate = ...
+  if aNoDate and bNoDate: return a.sortPriority - b.sortPriority
+  if aNoDate: return +1    // tasks without dates always last
+  if bNoDate: return -1
+  if a.sortPriority != b.sortPriority: return a.sortPriority - b.sortPriority
+  dc = a.sortDate.localeCompare(b.sortDate)
+  if dc != 0: return dc
+  return a.sortTime.localeCompare(b.sortTime)
+```
+
+### Smart title parsing (smartTitle.ts — parseSmartTitle)
+
+```
+function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority):
+  title = raw
+
+  // @FolderName → case-insensitive match; first match wins; unmatched stays in title
+  title = title.replace(/@(\S+)/g, (match, name) =>
+    folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
+    if folder: folderId = folder.id; return ''
+    return match
+  )
+
+  // #LabelName → case-insensitive match; adds to labelIds; unmatched stays in title
+  title = title.replace(/#(\S+)/g, (match, name) =>
+    label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
+    if label: labelIds.add(label.id); return ''
+    return match
+  )
+
+  // !1 → urgent, !2 → important, !3 → normal
+  title = title.replace(/!([123])/g, (match, digit) =>
+    switch digit:
+      '1': priority = 'urgent'
+      '2': priority = 'important'
+      '3': priority = 'normal'
+    return ''
+  )
+
+  return {
+    title: title.replace(/\s{2,}/g, ' ').trim(),
+    folderId,
+    labelsStr: Array.from(labelIds).join(','),
+    priority,
+  }
+```
