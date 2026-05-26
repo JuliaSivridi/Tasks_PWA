@@ -255,6 +255,9 @@
       <li><a href="#s12">Key Algorithms</a></li>
       <li><a href="#s13">Theme &amp; Colors</a></li>
       <li><a href="#s14">CI/CD</a></li>
+      <li><a href="#s15">Navigation &amp; Routes</a></li>
+      <li><a href="#s16">Loading &amp; Empty States</a></li>
+      <li><a href="#s17">First-Time Setup (New Developer)</a></li>
     </ol>
   </div>
 
@@ -1145,6 +1148,134 @@ sort(entries):
 
   <div class="callout">No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase.</div>
   <p>Build is run manually with <code>npm run build</code> (<code>tsc -b &amp;&amp; vite build</code>). Preview with <code>npm run preview</code>.</p>
+
+  <h1 id="s15" style="border-bottom:2px solid #e07e38;page-break-before:always">15. Navigation &amp; Routes</h1>
+
+  <div class="callout">The app has <strong>no URL-based router</strong>. All navigation is managed by <code>uiStore</code> (Zustand, in-memory only — not persisted). There are no route strings, no react-router, and no history API usage.</div>
+
+  <h2>SelectedView type (<code>src/store/uiStore.ts</code>)</h2>
+  <pre><code>type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'completed' | 'calendar'</code></pre>
+
+  <h2>View activation</h2>
+  <table>
+    <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>setView('upcoming')</code></td><td>Shows UpcomingView; clears folder/label/priority/calendar IDs</td></tr>
+      <tr><td><code>setView('all')</code></td><td>Shows AllTasksView</td></tr>
+      <tr><td><code>setView('folder', folderId)</code></td><td>Shows FolderView for the given folder</td></tr>
+      <tr><td><code>setView('label', labelId)</code></td><td>Shows LabelView for the given label</td></tr>
+      <tr><td><code>setView('priority', 'urgent'|'important'|'normal')</code></td><td>Shows PriorityView</td></tr>
+      <tr><td><code>setView('completed')</code></td><td>Shows CompletedView</td></tr>
+      <tr><td><code>setCalendarView(calendarId)</code></td><td>Shows CalendarEventListView for the given calendar</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Overlay screens</h2>
+  <p>Overlay screens are boolean flags in <code>uiStore</code>, not views. They render over the main content. When any is open, the sidebar and TaskList are hidden; the header shows a <code>ChevronLeft</code> back button.</p>
+  <table>
+    <thead><tr><th>Flag</th><th>Screen rendered</th></tr></thead>
+    <tbody>
+      <tr><td><code>settingsOpen</code></td><td><code>&lt;SettingsPage /&gt;</code></td></tr>
+      <tr><td><code>helpOpen</code></td><td><code>&lt;HelpPage /&gt;</code> — header title: "Short guide"</td></tr>
+      <tr><td><code>feedbackOpen</code></td><td><code>&lt;FeedbackPage /&gt;</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><code>selectedView</code> initialises to <code>'upcoming'</code>. There is no persisted last-view state. No deeplink URI schemes exist.</div>
+
+  <h1 id="s16" style="border-bottom:2px solid #e07e38;page-break-before:always">16. Loading &amp; Empty States</h1>
+
+  <h2>Global sync banner (<code>SyncStatusBanner.tsx</code>)</h2>
+  <p>Rendered above the main content area. Hidden when <code>isOnline &amp;&amp; !isSyncing &amp;&amp; pendingCount === 0 &amp;&amp; !syncError</code>.</p>
+  <table>
+    <thead><tr><th>Condition</th><th>Background</th><th>Icon</th><th>Text</th></tr></thead>
+    <tbody>
+      <tr><td><code>!isOnline</code></td><td><code>bg-amber-50 border-amber-200 text-amber-700</code></td><td><code>WifiOff size=14</code></td><td>"Offline" or "Offline · N changes pending"</td></tr>
+      <tr><td><code>syncError</code></td><td><code>bg-red-50 border-red-200 text-red-700</code></td><td><code>AlertCircle size=14</code></td><td>"Sync error" + "Retry" link → <code>fullSync()</code></td></tr>
+      <tr><td><code>isSyncing</code></td><td><code>bg-blue-50 border-blue-200 text-blue-700</code></td><td><code>RefreshCw size=14 animate-spin</code></td><td>"Syncing..."</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Per-view empty states</h2>
+  <div class="note">No skeleton/shimmer animations exist. Loading progress is shown only via SyncStatusBanner. All empty containers use <code>flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3</code>.</div>
+  <table>
+    <thead><tr><th>View</th><th>Icon</th><th>Message</th><th>Action button</th></tr></thead>
+    <tbody>
+      <tr><td>UpcomingView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No upcoming tasks"</td><td>"+ Add task" → <code>setCreateTaskOpen(true)</code></td></tr>
+      <tr><td>FolderView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
+      <tr><td>AllTasksView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
+      <tr><td>LabelView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
+      <tr><td>PriorityView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
+      <tr><td>CompletedView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No completed tasks"</td><td>—</td></tr>
+      <tr><td>CalendarEventListView (disabled)</td><td><code>CalendarDays size=40 opacity-20</code></td><td>"Enable Google Calendar in Settings to see events here."</td><td>—</td></tr>
+      <tr><td>CalendarEventListView (no events)</td><td><code>CalendarDays size=40 opacity-20</code></td><td>"No events"</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h1 id="s17" style="border-bottom:2px solid #e07e38;page-break-before:always">17. First-Time Setup (New Developer)</h1>
+
+  <h2>Prerequisites</h2>
+  <ul>
+    <li>Node.js ≥ 18, npm ≥ 9</li>
+    <li>A Google account</li>
+    <li>Access to <a href="https://console.cloud.google.com">Google Cloud Console</a></li>
+  </ul>
+
+  <h2>Steps</h2>
+  <ol>
+    <li>
+      <strong>Clone and install</strong>
+      <pre><code>git clone &lt;repo-url&gt;
+cd Tasks-PWA
+npm install</code></pre>
+    </li>
+    <li>
+      <strong>Create the env file</strong>
+      <pre><code>cp .env.example .env</code></pre>
+    </li>
+    <li>
+      <strong>Google Cloud Console — create OAuth credentials</strong>
+      <ol>
+        <li>Go to <a href="https://console.cloud.google.com">console.cloud.google.com</a> → create or select a project.</li>
+        <li>APIs &amp; Services → Enable APIs: <strong>Google Sheets API</strong>, <strong>Google Drive API</strong>, <strong>Google Calendar API</strong>.</li>
+        <li>APIs &amp; Services → Credentials → <strong>Create Credentials → OAuth 2.0 Client ID</strong>
+          <ul>
+            <li>Application type: <strong>Web application</strong></li>
+            <li>Authorized JavaScript origins: <code>http://localhost:5173</code></li>
+            <li>Authorized redirect URIs: <code>http://localhost:5173</code></li>
+          </ul>
+        </li>
+        <li>Copy the Client ID into <code>.env</code>:<br>
+          <code>VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com</code>
+        </li>
+      </ol>
+    </li>
+    <li>
+      <strong>(Optional) Feedback endpoint</strong>
+      <p>Deploy a Google Apps Script that appends rows to a sheet. Deploy as Web app (Execute as: Me, Access: Anyone). Copy the URL into <code>.env</code>:</p>
+      <pre><code>VITE_FEEDBACK_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec</code></pre>
+      <p>If omitted, the Feedback page submits silently without error.</p>
+    </li>
+    <li>
+      <strong>Run locally</strong>
+      <pre><code>npm run dev
+# → http://localhost:5173</code></pre>
+    </li>
+    <li>
+      <strong>First sign-in</strong> — Click "Sign in with Google". On first run <code>ensureSpreadsheet()</code> searches Drive for <code>db_tasks</code>. If not found, a new Sheets file is created and seeded with sample data via <code>seedOnboarding()</code>. The spreadsheet ID is cached in <code>localStorage</code> (<code>auth-storage</code>) so subsequent loads skip the Drive search.
+    </li>
+  </ol>
+
+  <h2>Available scripts</h2>
+  <table>
+    <thead><tr><th>Script</th><th>Command</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>dev</code></td><td><code>vite</code></td><td>Dev server at :5173 with HMR</td></tr>
+      <tr><td><code>build</code></td><td><code>tsc -b &amp;&amp; vite build</code></td><td>Type-check + production bundle → <code>dist/</code></td></tr>
+      <tr><td><code>preview</code></td><td><code>vite preview</code></td><td>Serve production build locally</td></tr>
+      <tr><td><code>lint</code></td><td><code>eslint .</code></td><td>Run ESLint</td></tr>
+    </tbody>
+  </table>
 
 </div>
 </body>

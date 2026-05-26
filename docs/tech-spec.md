@@ -20,6 +20,9 @@
 12. [Key Algorithms](#12-key-algorithms)
 13. [Theme & Colors](#13-theme--colors)
 14. [CI/CD](#14-cicd)
+15. [Navigation & Routes](#15-navigation--routes)
+16. [Loading & Empty States](#16-loading--empty-states)
+17. [First-Time Setup (New Developer)](#17-first-time-setup-new-developer)
 
 ---
 
@@ -973,3 +976,149 @@ function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds,
 ## 14. CI/CD
 
 No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase. Build is run manually with `npm run build` (`tsc -b && vite build`). Preview with `npm run preview`.
+
+---
+
+## 15. Navigation & Routes
+
+The app has **no URL-based router**. All navigation is managed by `uiStore` (Zustand, in-memory only — not persisted). There are no route strings, no `react-router`, and no `history` API usage.
+
+### SelectedView type (`src/store/uiStore.ts`)
+
+```ts
+type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'completed' | 'calendar'
+```
+
+### View activation
+
+| Method | Effect |
+|--------|--------|
+| `setView('upcoming')` | Shows UpcomingView; clears folder/label/priority/calendar IDs |
+| `setView('all')` | Shows AllTasksView |
+| `setView('folder', folderId)` | Shows FolderView for the given folder |
+| `setView('label', labelId)` | Shows LabelView for the given label |
+| `setView('priority', 'urgent'\|'important'\|'normal')` | Shows PriorityView |
+| `setView('completed')` | Shows CompletedView |
+| `setCalendarView(calendarId)` | Shows CalendarEventListView for the given calendar |
+
+### Overlay screens
+
+Overlay screens are boolean flags in `uiStore`, not views. They render over the main content:
+
+| Flag | Screen rendered |
+|------|----------------|
+| `settingsOpen` | `<SettingsPage />` |
+| `helpOpen` | `<HelpPage />` |
+| `feedbackOpen` | `<FeedbackPage />` |
+
+When any overlay is open, the sidebar and `<TaskList>` are hidden (`AppShell.tsx` line 33: `{!settingsOpen && !helpOpen && !feedbackOpen && ...}`). The header shows a `<ChevronLeft>` back button instead of the hamburger.
+
+### Default view
+
+`selectedView` initialises to `'upcoming'` (uiStore default). There is no persisted last-view state.
+
+### Deeplinks
+
+There are no deeplink URI schemes or URL parameters. The app is always served from `/` (single-page, no routing).
+
+---
+
+## 16. Loading & Empty States
+
+### Global sync banner (`SyncStatusBanner.tsx`)
+
+Rendered above the main content area. Hidden when `isOnline && !isSyncing && pendingCount === 0 && !syncError`.
+
+| Condition | Background | Icon | Text |
+|-----------|-----------|------|------|
+| `!isOnline` | `bg-amber-50 border-amber-200 text-amber-700` | `WifiOff size=14` | `"Offline"` or `"Offline · N changes pending"` |
+| `syncError` | `bg-red-50 border-red-200 text-red-700` | `AlertCircle size=14` | `"Sync error"` + "Retry" link (calls `fullSync()`) |
+| `isSyncing` | `bg-blue-50 border-blue-200 text-blue-700` | `RefreshCw size=14 animate-spin` | `"Syncing..."` |
+
+### Per-view empty states
+
+No skeleton/shimmer animations exist in the app. Loading progress is shown only via `SyncStatusBanner`.
+
+| View | Icon | Message | Action button |
+|------|------|---------|---------------|
+| UpcomingView | `FolderOpen size=40 opacity-20` | `"No upcoming tasks"` | `"+ Add task"` → `setCreateTaskOpen(true)` |
+| FolderView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
+| AllTasksView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
+| LabelView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
+| PriorityView | `FolderOpen size=40 opacity-20` | `"No tasks"` | `"+ Add task"` |
+| CompletedView | `FolderOpen size=40 opacity-20` | `"No completed tasks"` | — |
+| CalendarEventListView (calendar disabled) | `CalendarDays size=40 opacity-20` | `"Enable Google Calendar in Settings to see events here."` | — |
+| CalendarEventListView (no events) | `CalendarDays size=40 opacity-20` | `"No events"` | — |
+
+All empty state containers use: `flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3`.
+
+---
+
+## 17. First-Time Setup (New Developer)
+
+### Prerequisites
+
+- Node.js ≥ 18, npm ≥ 9
+- A Google account
+- Access to [Google Cloud Console](https://console.cloud.google.com)
+
+### Steps
+
+**1. Clone and install**
+```bash
+git clone <repo-url>
+cd Tasks-PWA
+npm install
+```
+
+**2. Create the env file**
+```bash
+cp .env.example .env
+```
+
+**3. Google Cloud Console — create OAuth credentials**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → create a new project (or reuse one).
+2. APIs & Services → Enable APIs:
+   - Google Sheets API
+   - Google Drive API
+   - Google Calendar API
+3. APIs & Services → Credentials → **Create Credentials → OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Authorized JavaScript origins: `http://localhost:5173`
+   - Authorized redirect URIs: `http://localhost:5173`
+4. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) into `.env`:
+   ```
+   VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
+   ```
+
+**4. (Optional) Feedback endpoint**
+
+Deploy a Google Apps Script that appends rows to a sheet:
+- Script should accept POST with `{ app, email, message }` and append `[timestamp, app, email, message]`.
+- Deploy as **Web app** (Execute as: Me, Access: Anyone).
+- Copy the deployment URL into `.env`:
+  ```
+  VITE_FEEDBACK_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
+  ```
+  If omitted, the Feedback page submits silently to nothing.
+
+**5. Run locally**
+```bash
+npm run dev
+# → http://localhost:5173
+```
+
+**6. First sign-in**
+- Click "Sign in with Google" → Google Identity Services popup.
+- On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Google Sheets file is created and seeded with sample data via `seedOnboarding()`.
+- The spreadsheet ID is cached in `localStorage` (`auth-storage`) so subsequent loads skip the Drive search.
+
+### Available scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `dev` | `vite` | Dev server at `:5173` with HMR |
+| `build` | `tsc -b && vite build` | Type-check + production bundle → `dist/` |
+| `preview` | `vite preview` | Serve production build locally |
+| `lint` | `eslint .` | Run ESLint |
