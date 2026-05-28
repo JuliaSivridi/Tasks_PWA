@@ -9,9 +9,16 @@ import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { flush, clearLocalData } from '@/services/syncService'
 
 export function Header() {
   const { user, logout } = useAuthStore()
+
+  const handleSignOut = async () => {
+    try { await flush() } catch { /* best effort — don't block logout on network errors */ }
+    await clearLocalData()
+    logout()
+  }
   const {
     setSidebarOpen, sidebarOpen,
     selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId,
@@ -102,7 +109,7 @@ export function Header() {
                       <MessageSquare size={14} className="mr-2" /> Feedback
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-destructive">
+                    <DropdownMenuItem onClick={() => void handleSignOut()} className="text-destructive">
                       <LogOut size={14} className="mr-2" /> Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>

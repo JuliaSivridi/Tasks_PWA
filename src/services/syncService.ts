@@ -10,11 +10,31 @@ import { useLabelsStore } from '@/store/labelsStore'
 import { useSyncStore } from '@/store/syncStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { usePrefsStore } from '@/store/prefsStore'
+import { db } from '@/services/db'
 import { addDays, startOfDay } from 'date-fns'
 import { now } from '@/utils/dateUtils'
 import type { Task } from '@/types/task'
 import type { Folder } from '@/types/folder'
 import type { Label } from '@/types/label'
+
+/**
+ * Clears all local data (Dexie tables + in-memory store state).
+ * Called on logout so the next user starts with a clean slate.
+ */
+export async function clearLocalData(): Promise<void> {
+  await Promise.all([
+    db.tasks.clear(),
+    db.folders.clear(),
+    db.labels.clear(),
+    db.queue.clear(),
+    db.calendarEvents.clear(),
+  ])
+  useTasksStore.setState({ tasks: [] })
+  useFoldersStore.setState({ folders: [] })
+  useLabelsStore.setState({ labels: [] })
+  useCalendarStore.setState({ events: [], calendars: [] })
+  useSyncStore.getState().setPendingCount(0)
+}
 
 async function processQueueItem(item: NonNullable<Awaited<ReturnType<typeof getPending>>[number]>): Promise<void> {
   const { entityType, operationType, payload } = item
