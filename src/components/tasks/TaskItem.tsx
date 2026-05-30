@@ -12,6 +12,7 @@ import {
 import { useTasksStore } from '@/store/tasksStore'
 import { useLabelsStore } from '@/store/labelsStore'
 import { useFoldersStore } from '@/store/foldersStore'
+import { usePrefsStore } from '@/store/prefsStore'
 import { getNextDueDate } from '@/services/recurrenceService'
 import { getDeadlineStatus, formatTaskDeadlineLabel } from '@/utils/dateUtils'
 
@@ -45,7 +46,7 @@ function LabelPicker({ taskId, currentLabels, onClose }: {
   if (labels.length === 0) {
     return (
       <div ref={ref} className="absolute z-50 mt-1 right-0 bg-popover border rounded-lg shadow-lg p-3 text-sm text-muted-foreground whitespace-nowrap">
-        Create labels in the sidebar.
+        Create labels in Settings.
       </div>
     )
   }
@@ -139,6 +140,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
   const { completeTask, updateTask, deleteTask, getChildren, setTaskExpanded } = useTasksStore()
   const { labels } = useLabelsStore()
   const { folders } = useFoldersStore()
+  const { prioritiesEnabled, labelsEnabled, foldersEnabled } = usePrefsStore()
 
   const allChildren = getChildren(task.id)
   const children = allChildren.filter(t => t.status === 'pending')
@@ -157,7 +159,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
 
   // When hideDeadline: show time only (date is already in the group header)
   const deadlineVisible = task.deadline_date && (!hideDeadline || task.deadline_time)
-  const hasSecondLine = deadlineVisible || (!hideLabels && labelIds.length > 0) || (folder && showFolder) || task.is_recurring || totalChildCount > 0
+  const hasSecondLine = deadlineVisible || (!hideLabels && labelsEnabled && labelIds.length > 0) || (folder && showFolder && foldersEnabled) || task.is_recurring || totalChildCount > 0
 
   const handleComplete = async () => {
     if (task.is_recurring && task.deadline_date) {
@@ -207,8 +209,8 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
             onCheckedChange={(v) => { if (v) void handleComplete() }}
             className={cn(
               'flex-shrink-0',
-              task.priority === 'urgent' && 'border-red-400 data-[state=checked]:bg-red-400 data-[state=checked]:border-red-400',
-              task.priority === 'important' && 'border-orange-400 data-[state=checked]:bg-orange-400 data-[state=checked]:border-orange-400',
+              prioritiesEnabled && task.priority === 'urgent' && 'border-red-400 data-[state=checked]:bg-red-400 data-[state=checked]:border-red-400',
+              prioritiesEnabled && task.priority === 'important' && 'border-orange-400 data-[state=checked]:bg-orange-400 data-[state=checked]:border-orange-400',
             )}
           />
 
@@ -232,34 +234,38 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
               <Clock size={15} />
             </button>
 
-            <div className="relative">
-              <button
-                onClick={() => { setPriorityPickerOpen(!priorityPickerOpen); setLabelPickerOpen(false) }}
-                className="p-1.5 rounded hover:bg-accent transition-colors"
-                title="Priority"
-              >
-                <Flag size={15} style={{ color: priorityColor(task.priority) }} />
-              </button>
-              {priorityPickerOpen && (
-                <PriorityPicker taskId={task.id} current={task.priority} onClose={() => setPriorityPickerOpen(false)} />
-              )}
-            </div>
-
-            <div className="relative">
-              <button
-                onClick={() => { setLabelPickerOpen(!labelPickerOpen); setPriorityPickerOpen(false) }}
-                className={cn(
-                  'p-1.5 rounded hover:bg-accent transition-colors',
-                  labelIds.length > 0 ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+            {prioritiesEnabled && (
+              <div className="relative">
+                <button
+                  onClick={() => { setPriorityPickerOpen(!priorityPickerOpen); setLabelPickerOpen(false) }}
+                  className="p-1.5 rounded hover:bg-accent transition-colors"
+                  title="Priority"
+                >
+                  <Flag size={15} style={{ color: priorityColor(task.priority) }} />
+                </button>
+                {priorityPickerOpen && (
+                  <PriorityPicker taskId={task.id} current={task.priority} onClose={() => setPriorityPickerOpen(false)} />
                 )}
-                title="Labels"
-              >
-                <Tag size={15} />
-              </button>
-              {labelPickerOpen && (
-                <LabelPicker taskId={task.id} currentLabels={labelIds} onClose={() => setLabelPickerOpen(false)} />
-              )}
-            </div>
+              </div>
+            )}
+
+            {labelsEnabled && (
+              <div className="relative">
+                <button
+                  onClick={() => { setLabelPickerOpen(!labelPickerOpen); setPriorityPickerOpen(false) }}
+                  className={cn(
+                    'p-1.5 rounded hover:bg-accent transition-colors',
+                    labelIds.length > 0 ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                  title="Labels"
+                >
+                  <Tag size={15} />
+                </button>
+                {labelPickerOpen && (
+                  <LabelPicker taskId={task.id} currentLabels={labelIds} onClose={() => setLabelPickerOpen(false)} />
+                )}
+              </div>
+            )}
 
             <button
               onClick={() => setAddChildOpen(true)}
@@ -305,58 +311,62 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Flag size={14} className="mr-2" style={{ color: priorityColor(task.priority) }} />
-                    Priority
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {([
-                      { value: 'urgent', label: 'Urgent', color: '#f87171' },
-                      { value: 'important', label: 'Important', color: '#fb923c' },
-                      { value: 'normal', label: 'Normal', color: '#9ca3af' },
-                    ] as const).map(p => (
-                      <DropdownMenuItem
-                        key={p.value}
-                        onClick={() => void updateTask(task.id, { priority: p.value })}
-                      >
-                        <Flag size={14} className="mr-2" style={{ color: p.color }} />
-                        {p.label}
-                        {task.priority === p.value && <span className="ml-auto pl-2 text-primary">✓</span>}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                {prioritiesEnabled && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Flag size={14} className="mr-2" style={{ color: priorityColor(task.priority) }} />
+                      Priority
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {([
+                        { value: 'urgent', label: 'Urgent', color: '#f87171' },
+                        { value: 'important', label: 'Important', color: '#fb923c' },
+                        { value: 'normal', label: 'Normal', color: '#9ca3af' },
+                      ] as const).map(p => (
+                        <DropdownMenuItem
+                          key={p.value}
+                          onClick={() => void updateTask(task.id, { priority: p.value })}
+                        >
+                          <Flag size={14} className="mr-2" style={{ color: p.color }} />
+                          {p.label}
+                          {task.priority === p.value && <span className="ml-auto pl-2 text-primary">✓</span>}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
 
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Tag size={14} className={cn('mr-2', labelIds.length > 0 ? 'text-primary' : '')} />
-                    Labels
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {labels.length === 0
-                      ? <DropdownMenuItem disabled>Create labels in the sidebar</DropdownMenuItem>
-                      : labels.map(l => {
-                          const active = labelIds.includes(l.id)
-                          return (
-                            <DropdownMenuItem
-                              key={l.id}
-                              onClick={() => {
-                                const next = active
-                                  ? labelIds.filter(id => id !== l.id)
-                                  : [...labelIds, l.id]
-                                void updateTask(task.id, { labels: next.join(',') })
-                              }}
-                            >
-                              <Tag size={14} className="mr-2" style={{ color: l.color }} />
-                              <span style={{ color: l.color }}>{l.name}</span>
-                              {active && <span className="ml-auto pl-2 text-primary">✓</span>}
-                            </DropdownMenuItem>
-                          )
-                        })
-                    }
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                {labelsEnabled && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Tag size={14} className={cn('mr-2', labelIds.length > 0 ? 'text-primary' : '')} />
+                      Labels
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {labels.length === 0
+                        ? <DropdownMenuItem disabled>Create labels in Settings</DropdownMenuItem>
+                        : labels.map(l => {
+                            const active = labelIds.includes(l.id)
+                            return (
+                              <DropdownMenuItem
+                                key={l.id}
+                                onClick={() => {
+                                  const next = active
+                                    ? labelIds.filter(id => id !== l.id)
+                                    : [...labelIds, l.id]
+                                  void updateTask(task.id, { labels: next.join(',') })
+                                }}
+                              >
+                                <Tag size={14} className="mr-2" style={{ color: l.color }} />
+                                <span style={{ color: l.color }}>{l.name}</span>
+                                {active && <span className="ml-auto pl-2 text-primary">✓</span>}
+                              </DropdownMenuItem>
+                            )
+                          })
+                      }
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
 
                 <DropdownMenuItem onClick={() => setAddChildOpen(true)}>
                   <Plus size={14} className="mr-2" />
@@ -395,7 +405,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
                     </span>
                   )
             )}
-            {!hideLabels && labelIds.map(id => {
+            {!hideLabels && labelsEnabled && labelIds.map(id => {
               const label = labels.find(l => l.id === id)
               return label ? (
                 <span key={id} className="flex items-center gap-1" style={{ color: label.color }}>
@@ -404,7 +414,7 @@ export function TaskItem({ task, depth, showFolder = false, hideChildren = false
                 </span>
               ) : null
             })}
-            {folder && showFolder && (
+            {folder && showFolder && foldersEnabled && (
               <span className="flex items-center gap-1" style={{ color: folder.color }}>
                 <Folder size={12} />
                 {folder.name}

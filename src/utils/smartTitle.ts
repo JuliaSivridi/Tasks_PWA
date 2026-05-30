@@ -9,6 +9,12 @@ export interface ParsedTitle {
   priority: Priority
 }
 
+interface SmartTitleFlags {
+  foldersEnabled?: boolean
+  labelsEnabled?: boolean
+  prioritiesEnabled?: boolean
+}
+
 /**
  * Parses smart-title tokens from a raw title string:
  *   @FolderName   — sets folderId (case-insensitive match, first match wins)
@@ -16,6 +22,7 @@ export interface ParsedTitle {
  *   !1 / !2 / !3  — sets priority: urgent / important / normal
  *
  * Unmatched tokens are left in the title; extra whitespace is collapsed.
+ * Pass `flags` to skip parsing for disabled features.
  */
 export function parseSmartTitle(
   raw: string,
@@ -24,35 +31,44 @@ export function parseSmartTitle(
   currentFolderId: string,
   currentLabelIds: string[],
   currentPriority: Priority,
+  flags: SmartTitleFlags = {},
 ): ParsedTitle {
+  const { foldersEnabled = true, labelsEnabled = true, prioritiesEnabled = true } = flags
+
   let title = raw
   let folderId = currentFolderId
   const labelIds = new Set(currentLabelIds)
   let priority = currentPriority
 
   // @FolderName → sets folderId
-  title = title.replace(/@(\S+)/g, (match, name: string) => {
-    const found = folders.find(f => f.name.toLowerCase() === name.toLowerCase())
-    if (found) { folderId = found.id; return '' }
-    return match
-  })
+  if (foldersEnabled) {
+    title = title.replace(/@(\S+)/g, (match, name: string) => {
+      const found = folders.find(f => f.name.toLowerCase() === name.toLowerCase())
+      if (found) { folderId = found.id; return '' }
+      return match
+    })
+  }
 
   // #LabelName → adds to labelIds
-  title = title.replace(/#(\S+)/g, (match, name: string) => {
-    const found = labels.find(l => l.name.toLowerCase() === name.toLowerCase())
-    if (found) { labelIds.add(found.id); return '' }
-    return match
-  })
+  if (labelsEnabled) {
+    title = title.replace(/#(\S+)/g, (match, name: string) => {
+      const found = labels.find(l => l.name.toLowerCase() === name.toLowerCase())
+      if (found) { labelIds.add(found.id); return '' }
+      return match
+    })
+  }
 
   // !1 → urgent, !2 → important, !3 → normal
-  title = title.replace(/!([123])/g, (_match, digit: string) => {
-    switch (digit) {
-      case '1': priority = 'urgent'; break
-      case '2': priority = 'important'; break
-      case '3': priority = 'normal'; break
-    }
-    return ''
-  })
+  if (prioritiesEnabled) {
+    title = title.replace(/!([123])/g, (_match, digit: string) => {
+      switch (digit) {
+        case '1': priority = 'urgent'; break
+        case '2': priority = 'important'; break
+        case '3': priority = 'normal'; break
+      }
+      return ''
+    })
+  }
 
   return {
     title: title.replace(/\s{2,}/g, ' ').trim(),

@@ -100,13 +100,17 @@ function FilterBar({
   const { labels } = useLabelsStore()
   const { folders } = useFoldersStore()
   const { calendars } = useCalendarStore()
-  const { enabledCalendarIds } = usePrefsStore()
+  const { enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled } = usePrefsStore()
   const enabledCalendars = calendars.filter(c => enabledCalendarIds.includes(c.id))
 
   const toggle = <T extends string>(arr: T[], id: T, set: (v: T[]) => void) =>
     set(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id])
 
-  const anyActive = priorityFilter.length > 0 || labelFilter.length > 0 || folderFilter.length > 0 || calendarFilter.length > 0
+  const anyActive =
+    (prioritiesEnabled && priorityFilter.length > 0) ||
+    (labelsEnabled && labelFilter.length > 0) ||
+    (foldersEnabled && folderFilter.length > 0) ||
+    calendarFilter.length > 0
 
   return (
     <div className="flex items-center gap-1 px-3 py-1.5 border-b">
@@ -122,64 +126,70 @@ function FilterBar({
       )}
 
       {/* Priority */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', priorityFilter.length > 0 && 'bg-accent')}>
-            <Flag size={14} className={priorityFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[140px]">
-          {PRIORITY_OPTS.map(p => (
-            <DropdownMenuItem key={p.id} onSelect={(e) => { e.preventDefault(); toggle(priorityFilter, p.id, setPriorityFilter) }}>
-              <Flag size={14} className="mr-2" style={{ color: p.color }} />
-              {p.title}
-              {priorityFilter.includes(p.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {prioritiesEnabled && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', priorityFilter.length > 0 && 'bg-accent')}>
+              <Flag size={14} className={priorityFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[140px]">
+            {PRIORITY_OPTS.map(p => (
+              <DropdownMenuItem key={p.id} onSelect={(e) => { e.preventDefault(); toggle(priorityFilter, p.id, setPriorityFilter) }}>
+                <Flag size={14} className="mr-2" style={{ color: p.color }} />
+                {p.title}
+                {priorityFilter.includes(p.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Label */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn('p-1.5 rounded transition-colors hover:bg-accent', labelFilter.length > 0 && 'bg-accent')}
-            disabled={labels.length === 0}
-          >
-            <Tag size={14} className={labelFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[140px]">
-          {labels.map(l => (
-            <DropdownMenuItem key={l.id} onSelect={(e) => { e.preventDefault(); toggle(labelFilter, l.id, setLabelFilter) }}>
-              <Tag size={14} className="mr-2" style={{ color: l.color }} />
-              <span style={{ color: l.color }}>{l.name}</span>
-              {labelFilter.includes(l.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {labelsEnabled && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn('p-1.5 rounded transition-colors hover:bg-accent', labelFilter.length > 0 && 'bg-accent')}
+              disabled={labels.length === 0}
+            >
+              <Tag size={14} className={labelFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[140px]">
+            {labels.map(l => (
+              <DropdownMenuItem key={l.id} onSelect={(e) => { e.preventDefault(); toggle(labelFilter, l.id, setLabelFilter) }}>
+                <Tag size={14} className="mr-2" style={{ color: l.color }} />
+                <span style={{ color: l.color }}>{l.name}</span>
+                {labelFilter.includes(l.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Folder */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn('p-1.5 rounded transition-colors hover:bg-accent', folderFilter.length > 0 && 'bg-accent')}
-            disabled={folders.length === 0}
-          >
-            <Folder size={14} className={folderFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[140px]">
-          {folders.map(f => (
-            <DropdownMenuItem key={f.id} onSelect={(e) => { e.preventDefault(); toggle(folderFilter, f.id, setFolderFilter) }}>
-              <Folder size={14} className="mr-2" style={{ color: f.color }} />
-              {f.name}
-              {folderFilter.includes(f.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {foldersEnabled && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn('p-1.5 rounded transition-colors hover:bg-accent', folderFilter.length > 0 && 'bg-accent')}
+              disabled={folders.length === 0}
+            >
+              <Folder size={14} className={folderFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[140px]">
+            {folders.map(f => (
+              <DropdownMenuItem key={f.id} onSelect={(e) => { e.preventDefault(); toggle(folderFilter, f.id, setFolderFilter) }}>
+                <Folder size={14} className="mr-2" style={{ color: f.color }} />
+                {f.name}
+                {folderFilter.includes(f.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Calendar chip — only enabled calendars */}
       {enabledCalendars.length > 0 && (

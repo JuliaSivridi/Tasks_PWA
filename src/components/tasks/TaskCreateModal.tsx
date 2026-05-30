@@ -142,7 +142,7 @@ export function TaskCreateModal({
   const { labels, addLabel } = useLabelsStore()
   const { folders } = useFoldersStore()
   const { calendars, upsertEvent } = useCalendarStore()
-  const { calendarEnabled, enabledCalendarIds } = usePrefsStore()
+  const { calendarEnabled, enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled } = usePrefsStore()
 
   // ── Form state ────────────────────────────────────────────────────────────
 
@@ -454,6 +454,7 @@ export function TaskCreateModal({
       data.folder_id,
       data.labels.split(',').filter(Boolean),
       data.priority,
+      { foldersEnabled, labelsEnabled, prioritiesEnabled },
     )
     if (editing) {
       await updateTask(editing.id, {
@@ -618,85 +619,91 @@ export function TaskCreateModal({
                 </div>
 
                 {/* Folder chip */}
-                <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-sm">Folder</Label>
-                  <button
-                    type="button"
-                    onClick={() => setShowFolderPicker(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border border-border hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: `${selectedFolder?.color ?? '#6b7280'}2e` }}
-                  >
-                    <FolderIcon size={14} style={{ color: selectedFolder?.color ?? 'currentColor' }} />
-                    <span>{selectedFolder?.name ?? 'Inbox'}</span>
-                  </button>
-                </div>
+                {foldersEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-sm">Folder</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowFolderPicker(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border border-border hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: `${selectedFolder?.color ?? '#6b7280'}2e` }}
+                    >
+                      <FolderIcon size={14} style={{ color: selectedFolder?.color ?? 'currentColor' }} />
+                      <span>{selectedFolder?.name ?? 'Inbox'}</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Labels row */}
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowLabelPicker(true)}
-                    className="flex items-center justify-between w-full text-sm py-0.5"
-                  >
-                    <span className="text-muted-foreground">
-                      Labels{currentLabels.length > 0 ? ` (${currentLabels.length})` : ''}
-                    </span>
-                    <span className="text-muted-foreground text-base leading-none">›</span>
-                  </button>
-                  {currentLabels.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentLabels.map(id => {
-                        const lbl = labels.find(l => l.id === id)
-                        if (!lbl) return null
-                        return (
-                          <span
-                            key={id}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
-                            style={{ borderColor: lbl.color, color: lbl.color }}
-                          >
-                            <Tag size={10} />
-                            {lbl.name}
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleLabel(id) }}
-                              className="hover:opacity-70 ml-0.5"
+                {labelsEnabled && (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowLabelPicker(true)}
+                      className="flex items-center justify-between w-full text-sm py-0.5"
+                    >
+                      <span className="text-muted-foreground">
+                        Labels{currentLabels.length > 0 ? ` (${currentLabels.length})` : ''}
+                      </span>
+                      <span className="text-muted-foreground text-base leading-none">›</span>
+                    </button>
+                    {currentLabels.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {currentLabels.map(id => {
+                          const lbl = labels.find(l => l.id === id)
+                          if (!lbl) return null
+                          return (
+                            <span
+                              key={id}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border"
+                              style={{ borderColor: lbl.color, color: lbl.color }}
                             >
-                              <X size={10} />
-                            </button>
-                          </span>
+                              <Tag size={10} />
+                              {lbl.name}
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleLabel(id) }}
+                                className="hover:opacity-70 ml-0.5"
+                              >
+                                <X size={10} />
+                              </button>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Priority chips */}
+                {prioritiesEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-muted-foreground text-sm">Priority</Label>
+                    <div className="flex gap-2">
+                      {PRIORITY_OPTIONS.map(p => {
+                        const selected = currentPriority === p.value
+                        return (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => setValue('priority', p.value)}
+                            className={cn(
+                              'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors flex-1 justify-center',
+                              selected ? 'border-current' : 'border-border hover:bg-accent',
+                            )}
+                            style={selected ? { color: p.color, backgroundColor: `${p.color}2e` } : {}}
+                          >
+                            {selected
+                              ? <Check size={14} style={{ color: p.color }} />
+                              : <Flag size={14} style={{ color: p.color }} />
+                            }
+                            {p.label}
+                          </button>
                         )
                       })}
                     </div>
-                  )}
-                </div>
-
-                {/* Priority chips */}
-                <div className="space-y-1.5">
-                  <Label className="text-muted-foreground text-sm">Priority</Label>
-                  <div className="flex gap-2">
-                    {PRIORITY_OPTIONS.map(p => {
-                      const selected = currentPriority === p.value
-                      return (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => setValue('priority', p.value)}
-                          className={cn(
-                            'flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors flex-1 justify-center',
-                            selected ? 'border-current' : 'border-border hover:bg-accent',
-                          )}
-                          style={selected ? { color: p.color, backgroundColor: `${p.color}2e` } : {}}
-                        >
-                          {selected
-                            ? <Check size={14} style={{ color: p.color }} />
-                            : <Flag size={14} style={{ color: p.color }} />
-                          }
-                          {p.label}
-                        </button>
-                      )
-                    })}
                   </div>
-                </div>
+                )}
               </>
             )}
 
@@ -998,7 +1005,7 @@ export function TaskCreateModal({
       </Dialog>
 
       {/* ── Folder Picker Dialog (A-03) ──────────────────────────────────── */}
-      <Dialog open={showFolderPicker} onOpenChange={(v) => !v && setShowFolderPicker(false)}>
+      <Dialog open={showFolderPicker && foldersEnabled} onOpenChange={(v) => !v && setShowFolderPicker(false)}>
         <DialogContent className="max-w-sm z-[60]">
           <DialogHeader>
             <DialogTitle>Select folder</DialogTitle>
@@ -1033,7 +1040,7 @@ export function TaskCreateModal({
 
       {/* ── Label Picker Sheet (A-03) ─────────────────────────────────────── */}
       <Sheet
-        open={showLabelPicker}
+        open={showLabelPicker && labelsEnabled}
         onOpenChange={(v) => {
           if (!v) {
             setShowLabelPicker(false)

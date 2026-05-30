@@ -15,9 +15,17 @@ interface PrefsState {
   /** IDs of calendars the user chose to sync */
   enabledCalendarIds: string[]
 
+  /** Feature toggles — all default true (existing users see no change) */
+  prioritiesEnabled: boolean
+  labelsEnabled: boolean
+  foldersEnabled: boolean
+
   toggleSection: (key: string) => void
   setCalendarEnabled: (v: boolean) => void
   setEnabledCalendarIds: (ids: string[]) => void
+  setPrioritiesEnabled: (v: boolean) => void
+  setLabelsEnabled: (v: boolean) => void
+  setFoldersEnabled: (v: boolean) => void
   load: () => Promise<void>
 }
 
@@ -35,6 +43,9 @@ function getSnapshot(state: PrefsState): Record<string, unknown> {
     sectionOpen: state.sectionOpen,
     calendarEnabled: state.calendarEnabled,
     enabledCalendarIds: state.enabledCalendarIds,
+    prioritiesEnabled: state.prioritiesEnabled,
+    labelsEnabled: state.labelsEnabled,
+    foldersEnabled: state.foldersEnabled,
   }
 }
 
@@ -43,6 +54,9 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
   loaded: false,
   calendarEnabled: false,
   enabledCalendarIds: [],
+  prioritiesEnabled: true,
+  labelsEnabled: true,
+  foldersEnabled: true,
 
   toggleSection: (key) => {
     const current = get().sectionOpen[key] ?? true
@@ -61,6 +75,21 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
     scheduleSave(getSnapshot({ ...get(), enabledCalendarIds: ids }))
   },
 
+  setPrioritiesEnabled: (v) => {
+    set({ prioritiesEnabled: v })
+    scheduleSave(getSnapshot({ ...get(), prioritiesEnabled: v }))
+  },
+
+  setLabelsEnabled: (v) => {
+    set({ labelsEnabled: v })
+    scheduleSave(getSnapshot({ ...get(), labelsEnabled: v }))
+  },
+
+  setFoldersEnabled: (v) => {
+    set({ foldersEnabled: v })
+    scheduleSave(getSnapshot({ ...get(), foldersEnabled: v }))
+  },
+
   load: async () => {
     const { loadSettings } = await import('@/api/settingsApi')
     const settings = await loadSettings()
@@ -73,6 +102,21 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
       ? (settings.enabledCalendarIds as string[])
       : []
 
-    set({ sectionOpen, calendarEnabled, enabledCalendarIds, loaded: true })
+    // Feature flags — default true so existing users see no change
+    const prioritiesEnabled = settings.prioritiesEnabled !== undefined
+      ? Boolean(settings.prioritiesEnabled)
+      : true
+    const labelsEnabled = settings.labelsEnabled !== undefined
+      ? Boolean(settings.labelsEnabled)
+      : true
+    const foldersEnabled = settings.foldersEnabled !== undefined
+      ? Boolean(settings.foldersEnabled)
+      : true
+
+    set({
+      sectionOpen, calendarEnabled, enabledCalendarIds,
+      prioritiesEnabled, labelsEnabled, foldersEnabled,
+      loaded: true,
+    })
   },
 }))
