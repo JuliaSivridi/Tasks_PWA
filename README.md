@@ -160,4 +160,4 @@ npm run build  # production build
 ## Related
 
 - **Android version:** [github.com/JuliaSivridi/Tasks_Android](https://github.com/JuliaSivridi/Tasks_Android) — Kotlin + Jetpack Compose, same Google Sheets backend
-- **Technical specification:** [`docs/tech-spec.html`](docs/tech-spec.html)
+- **Technical specification:** [`docs/tech-spec.md`](docs/tech-spec.md)

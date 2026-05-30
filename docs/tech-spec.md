@@ -1,6 +1,6 @@
 # Tasks PWA — Technical Specification
 
-> Version 0.0.0 · Branch: main · Generated: 2026-05-27
+> Version 0.0.0 · Branch: main · Generated: 2026-05-30
 
 ---
 
@@ -186,7 +186,7 @@ Tasks-PWA/
     ├── services/
     │   ├── db.ts               Dexie schema (TaskManagerDB, versions 1+2)
     │   ├── authService.ts      initAuth(), GIS script loader
-    │   ├── syncService.ts      flush(), pull(), pullCalendar(), initialLoad(), fullSync(), scheduleFlush()
+    │   ├── syncService.ts      flush(), pull(), pullCalendar(), initialLoad(), fullSync(), scheduleFlush(), clearLocalData()
     │   ├── offlineQueue.ts     enqueue(), getPending(), markDone(), markFailed(), etc.
     │   └── recurrenceService.ts getNextDueDate(), createNextOccurrence()
     ├── api/
@@ -205,7 +205,7 @@ Tasks-PWA/
     │   ├── foldersStore.ts     folders[], addFolder, updateFolder, deleteFolder, ensureInbox
     │   ├── labelsStore.ts      labels[], addLabel, updateLabel, renameLabel, deleteLabel
     │   ├── calendarStore.ts    events[], calendars[], setEvents, upsertEvent, removeEvent
-    │   ├── prefsStore.ts       sectionOpen, calendarEnabled, enabledCalendarIds; saves to settings sheet
+    │   ├── prefsStore.ts       sectionOpen, calendarEnabled, enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled; saves to settings sheet
     │   ├── syncStore.ts        isSyncing, isOnline, lastSyncAt, pendingCount, syncError
     │   └── uiStore.ts          selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId
     ├── hooks/
@@ -217,7 +217,7 @@ Tasks-PWA/
         │   ├── AppShell.tsx    Top-level shell: Header + Sidebar + main content
         │   ├── LoginPage.tsx   Google sign-in page
         │   ├── Header.tsx      App bar with title, hamburger, user avatar dropdown
-        │   └── Sidebar.tsx     Navigation, folders, labels, calendars, sync status
+        │   └── Sidebar.tsx     Navigation, folders (when foldersEnabled), calendars, sync status
         ├── tasks/
         │   ├── TaskList.tsx    View router + all view implementations
         │   ├── TaskItem.tsx    Single task row with inline actions
@@ -228,7 +228,7 @@ Tasks-PWA/
         │   ├── CalendarEventItem.tsx Event row (mirrors TaskItem layout)
         │   └── EventScheduleDialog.tsx Edit event schedule/recurrence dialog
         ├── settings/
-        │   └── SettingsPage.tsx Spreadsheet picker + calendar toggle/list
+        │   └── SettingsPage.tsx Feature toggles (Priorities/Labels/Folders/Calendars), spreadsheet picker, Labels & Folders CRUD, calendar toggle/list
         ├── help/
         │   └── HelpPage.tsx    Static user guide
         ├── feedback/
@@ -384,7 +384,10 @@ Single cell containing a JSON string. Structure:
 {
   "sectionOpen": { "priorities": true, "folders": true, "labels": true },
   "calendarEnabled": false,
-  "enabledCalendarIds": []
+  "enabledCalendarIds": [],
+  "prioritiesEnabled": true,
+  "labelsEnabled": true,
+  "foldersEnabled": true
 }
 ```
 
@@ -459,6 +462,15 @@ Database name: **`TaskManagerDB`**
    d. `pullCalendar()` — if `calendarEnabled`, fetches events.
 4. `ensureInbox()` — guarantees the Inbox folder exists in Dexie and Zustand.
 5. `usePrefsStore.load()` — reads `settings!A1` and restores sidebar section states and calendar preferences.
+
+### Logout
+
+The "Sign out" action (Header dropdown) calls `handleSignOut()`:
+1. `flush()` — pushes all pending queue items to Sheets (best-effort; network errors are swallowed so the user is never blocked from logging out).
+2. `clearLocalData()` — clears all Dexie tables (`tasks`, `folders`, `labels`, `queue`, `calendarEvents`) and resets in-memory Zustand state for `tasksStore`, `foldersStore`, `labelsStore`, `calendarStore`.
+3. `logout()` (authStore) — revokes the GIS token, clears `accessToken`, `user`, `spreadsheetId` from state and `localStorage`.
+
+This ensures that no data from one Google account leaks into a subsequent login from a different account.
 
 ### Token refresh in flight
 
@@ -572,6 +584,7 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 - **Filters:** `priorityFilter`, `labelFilter`, `folderFilter`, `calendarFilter` (all multi-select, applied via `filterMatrix`).
 - **Sort (per group):** items with a time sort earlier than all-day/timeless items; all-day and timeless items use `'99:99'` sentinel.
 - **Layout:** `WeekStrip` (7-day navigation strip at top) + `FilterBar` + scrollable groups. Each day group has a header label. Overdue group is first, coloured red.
+- **FilterBar:** Priority button hidden when `prioritiesEnabled === false`; Label button hidden when `labelsEnabled === false`; Folder button hidden when `foldersEnabled === false`.
 - **Empty state:** `FolderOpen size=40 opacity-20` + "No upcoming tasks" + "Add task" ghost button.
 - **Special features:** `IntersectionObserver` tracks the topmost visible date group and highlights it in the `WeekStrip`. Clicking a day in the strip scrolls to that date's group. Week navigation arrows move the strip; the "Today" button scrolls to today.
 - **User actions:** check task (complete/advance), open `TimePickerDialog`, open `TaskCreateModal` (edit), delete, label/priority pickers inline. For events: edit (opens `TaskCreateModal` in event mode), delete (with recurring choice dialog), edit schedule (opens `EventScheduleDialog`).
@@ -629,8 +642,13 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 
 ### SettingsPage
 
-- **Spreadsheet section:** shows current spreadsheet name/ID. "Change" button opens an inline list of all Google Sheets from the user's Drive (`listUserSheets()`). Selecting a different sheet clears Dexie (tasks, folders, labels, queue), invalidates row cache, then runs `initialLoad()`.
-- **Calendars section:** toggle switch for `calendarEnabled`. When enabled, fetches `listCalendars()` and shows each calendar with a checkbox. Toggling a calendar calls `setEnabledCalendarIds()` + `pullCalendar()`. Refresh button re-fetches calendar list. If the Calendar API returns 403, shows a "Grant access" button that triggers `refreshToken()`.
+Cards are rendered in this order (no section header labels):
+
+- **Spreadsheet card:** shows current spreadsheet name/ID. "Change" opens an inline list of all Google Sheets from the user's Drive (`listUserSheets()`). Selecting a different sheet clears Dexie (tasks, folders, labels, queue), invalidates row cache, then runs `initialLoad()`.
+- **Priorities card:** toggle for `prioritiesEnabled`. Subtitle: "Mark tasks as Urgent, Important, or Normal". No list — just the toggle row.
+- **Labels card:** toggle for `labelsEnabled` + "+" button (when enabled). Animated list of all labels with colored dot, name, Edit and Delete buttons. Edit → `ItemFormModal`. Delete → `ConfirmDialog` → `stripLabelFromTasks` + `deleteLabel`.
+- **Folders card:** toggle for `foldersEnabled` + "+" button (when enabled). List shows Inbox first (read-only, no edit/delete), then other folders sorted by `sort_order`. Edit/Delete buttons per folder. Delete → `ConfirmDialog` → `moveTasksToFolder(id, INBOX)` + `deleteFolder`.
+- **Calendars card:** toggle for `calendarEnabled`. When enabled, fetches `listCalendars()` and shows each calendar with a checkmark. Refresh button (inline in header row). 403 → "Grant access" → `refreshToken()`. Toggling a calendar calls `setEnabledCalendarIds()` + `pullCalendar()`.
 
 ### HelpPage
 
@@ -661,8 +679,13 @@ Static content page with sections: Getting started, Tasks, Views, Calendar & eve
 
 **Layout:** Two-row structure. Row 1: expand chevron | Radix Checkbox | title | action icons. Row 2 (if any of: deadline, labels, folder, recurring, child count): recurring icon, deadline label, label chips, folder chip, child counts (completed/pending/total).
 
-**Desktop actions (md+):** Clock (deadline), Flag (priority picker), Tag (label picker), Plus (add subtask), Pencil (edit), Trash.  
-**Mobile actions:** Clock + `MoreHorizontal` dropdown with submenus for Priority, Labels, Add subtask, Edit, Delete.
+**Desktop actions (md+):** Clock (deadline), Flag (priority picker, only when `prioritiesEnabled`), Tag (label picker, only when `labelsEnabled`), Plus (add subtask), Pencil (edit), Trash.  
+**Mobile actions:** Clock + `MoreHorizontal` dropdown with submenus for Priority (only when `prioritiesEnabled`), Labels (only when `labelsEnabled`), Add subtask, Edit, Delete.
+
+**Feature flag effects on TaskItem:**
+- `prioritiesEnabled === false` → checkbox renders without priority color classes; Flag button and Priority submenu hidden.
+- `labelsEnabled === false` → label chips in Row 2 hidden; Tag button and Labels submenu hidden.
+- `foldersEnabled === false` → folder chip in Row 2 hidden (even when `showFolder === true`).
 
 **Deadline colors:** overdue → `text-red-400`, today → `text-green-600`, tomorrow → `text-orange-400`, week (2–7 days) → `text-violet-400`, future → `text-muted-foreground`.
 
@@ -1062,32 +1085,41 @@ sort(entries):
 
 ### Smart title parsing (smartTitle.ts — parseSmartTitle)
 
+Accepts an optional `flags` object (`{ foldersEnabled?, labelsEnabled?, prioritiesEnabled? }`, all default `true`). Parsing of each token group is skipped when the corresponding flag is `false`.
+
 ```
-function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority):
+function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority,
+                         flags = { foldersEnabled: true, labelsEnabled: true, prioritiesEnabled: true }):
   title = raw
 
   // @FolderName → case-insensitive match; first match wins; unmatched stays in title
-  title = title.replace(/@(\S+)/g, (match, name) =>
-    folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
-    if folder: folderId = folder.id; return ''
-    return match
-  )
+  // Skipped entirely when flags.foldersEnabled === false
+  if flags.foldersEnabled:
+    title = title.replace(/@(\S+)/g, (match, name) =>
+      folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
+      if folder: folderId = folder.id; return ''
+      return match
+    )
 
   // #LabelName → case-insensitive match; adds to labelIds; unmatched stays in title
-  title = title.replace(/#(\S+)/g, (match, name) =>
-    label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
-    if label: labelIds.add(label.id); return ''
-    return match
-  )
+  // Skipped entirely when flags.labelsEnabled === false
+  if flags.labelsEnabled:
+    title = title.replace(/#(\S+)/g, (match, name) =>
+      label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
+      if label: labelIds.add(label.id); return ''
+      return match
+    )
 
   // !1 → urgent, !2 → important, !3 → normal
-  title = title.replace(/!([123])/g, (match, digit) =>
-    switch digit:
-      '1': priority = 'urgent'
-      '2': priority = 'important'
-      '3': priority = 'normal'
-    return ''
-  )
+  // Skipped entirely when flags.prioritiesEnabled === false
+  if flags.prioritiesEnabled:
+    title = title.replace(/!([123])/g, (match, digit) =>
+      switch digit:
+        '1': priority = 'urgent'
+        '2': priority = 'important'
+        '3': priority = 'normal'
+      return ''
+    )
 
   return {
     title: title.replace(/\s{2,}/g, ' ').trim(),

@@ -228,7 +228,7 @@
   <div class="meta">
     <strong>Version</strong> 0.0.0<br>
     <strong>Branch</strong> main<br>
-    <strong>Generated</strong> 2026-05-27<br>
+    <strong>Generated</strong> 2026-05-30<br>
     <strong>Stack</strong> React 19 · Vite · Zustand · Dexie · Google Sheets API
   </div>
   <div class="inspiration">
@@ -403,7 +403,7 @@ Tasks-PWA/<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── layout/             <span class="dim">AppShell, LoginPage, Header, Sidebar</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── tasks/              <span class="dim">TaskList, TaskItem, TaskChildren, TaskCreateModal, TimePickerDialog</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── calendar/           <span class="dim">CalendarEventItem, EventScheduleDialog</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── settings/           <span class="dim">SettingsPage</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── settings/           <span class="dim">SettingsPage — feature toggles (Priorities/Labels/Folders/Calendars), CRUD for labels &amp; folders</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── help/               <span class="dim">HelpPage</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── feedback/           <span class="dim">FeedbackPage</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── common/             <span class="dim">ConfirmDialog, DeadlineBadge, PriorityBadge, SyncStatusBanner, Toast</span><br>
@@ -542,7 +542,10 @@ Tasks-PWA/<br>
   <pre><code>{
   "sectionOpen": { "priorities": true, "folders": true, "labels": true },
   "calendarEnabled": false,
-  "enabledCalendarIds": []
+  "enabledCalendarIds": [],
+  "prioritiesEnabled": true,
+  "labelsEnabled": true,
+  "foldersEnabled": true
 }</code></pre>
   <p>Written by <code>saveSettings()</code>, read by <code>loadSettings()</code>. Falls back to <code>{}</code> on error. If the sheet does not exist, <code>saveSettings</code> creates it via <code>batchUpdate</code>.</p>
 
@@ -599,6 +602,15 @@ Tasks-PWA/<br>
     <li><code>ensureInbox()</code> — guarantees the Inbox folder exists.</li>
     <li><code>usePrefsStore.load()</code> — reads <code>settings!A1</code> and restores sidebar states and calendar preferences.</li>
   </ol>
+
+  <h2>Logout</h2>
+  <p>The "Sign out" action calls <code>handleSignOut()</code> in <code>Header.tsx</code>:</p>
+  <ol>
+    <li><code>flush()</code> — pushes all pending queue items to Sheets (best-effort; network errors are swallowed).</li>
+    <li><code>clearLocalData()</code> — clears all Dexie tables (<code>tasks</code>, <code>folders</code>, <code>labels</code>, <code>queue</code>, <code>calendarEvents</code>) and resets in-memory Zustand state for tasksStore, foldersStore, labelsStore, calendarStore.</li>
+    <li><code>logout()</code> (authStore) — revokes the GIS token, clears <code>accessToken</code>, <code>user</code>, <code>spreadsheetId</code> from state and <code>localStorage</code>.</li>
+  </ol>
+  <div class="note">This ensures no data from one Google account leaks into a subsequent login from a different account.</div>
 
   <h2>Token refresh in flight</h2>
   <p><code>sheetsClient.ts</code> and <code>calendarApi.ts</code> both implement automatic token refresh: HTTP 401 → one refresh attempt → retry. A second 401 throws an error.</p>
@@ -755,9 +767,13 @@ Tasks-PWA/<br>
   <p>Shows <code>ListTodo</code> icon + title "Tasks", tagline, and "Sign in with Google" button. Button triggers <code>refreshToken()</code>. Shows loading state while signing in.</p>
 
   <h2>SettingsPage</h2>
+  <p>Cards rendered in order (no section header labels):</p>
   <ul>
-    <li><strong>Spreadsheet section:</strong> shows current spreadsheet name/ID. "Change" opens an inline list of all Google Sheets from Drive (<code>listUserSheets()</code>). Selecting a sheet clears Dexie + invalidates row cache + runs <code>initialLoad()</code>.</li>
-    <li><strong>Calendars section:</strong> toggle for <code>calendarEnabled</code>. When enabled, fetches <code>listCalendars()</code> and shows checkboxes. Refresh button re-fetches. 403 → "Grant access" button → <code>refreshToken()</code>.</li>
+    <li><strong>Spreadsheet:</strong> shows current spreadsheet name/ID. "Change" opens an inline list of all Google Sheets from Drive (<code>listUserSheets()</code>). Selecting a sheet clears Dexie + invalidates row cache + runs <code>initialLoad()</code>.</li>
+    <li><strong>Priorities:</strong> toggle for <code>prioritiesEnabled</code>. Subtitle: "Mark tasks as Urgent, Important, or Normal". No list — just the toggle row.</li>
+    <li><strong>Labels:</strong> toggle for <code>labelsEnabled</code> + "+" button (when enabled). List of all labels with colored dot, name, Edit and Delete buttons. Edit → <code>ItemFormModal</code>. Delete → <code>ConfirmDialog</code> → <code>stripLabelFromTasks</code> + <code>deleteLabel</code>.</li>
+    <li><strong>Folders:</strong> toggle for <code>foldersEnabled</code> + "+" button (when enabled). Inbox shown first (read-only), then other folders sorted by <code>sort_order</code>. Edit/Delete per folder. Delete → <code>ConfirmDialog</code> → <code>moveTasksToFolder(id, INBOX)</code> + <code>deleteFolder</code>.</li>
+    <li><strong>Calendars:</strong> toggle for <code>calendarEnabled</code>. When enabled, fetches <code>listCalendars()</code> and shows checkboxes. Refresh button (inline with toggle). 403 → "Grant access" → <code>refreshToken()</code>. Toggling a calendar → <code>setEnabledCalendarIds()</code> + <code>pullCalendar()</code>.</li>
   </ul>
 
   <h2>HelpPage</h2>
@@ -783,7 +799,8 @@ Tasks-PWA/<br>
   </table>
   <p><strong>Internal state:</strong> <code>expanded</code>, <code>confirmDelete</code>, <code>editOpen</code>, <code>addChildOpen</code>, <code>labelPickerOpen</code>, <code>priorityPickerOpen</code>, <code>timePickerOpen</code>.</p>
   <p><strong>Layout:</strong> Row 1: expand chevron · Checkbox · title · action icons. Row 2 (conditional): recurring icon · deadline · label chips · folder chip · child counts.</p>
-  <p><strong>Desktop (md+):</strong> Clock, Flag, Tag, Plus, Pencil, Trash. <strong>Mobile:</strong> Clock + <code>MoreHorizontal</code> dropdown.</p>
+  <p><strong>Desktop (md+):</strong> Clock · Flag (only when <code>prioritiesEnabled</code>) · Tag (only when <code>labelsEnabled</code>) · Plus · Pencil · Trash. <strong>Mobile:</strong> Clock + <code>MoreHorizontal</code> dropdown with Priority submenu (only when <code>prioritiesEnabled</code>) and Labels submenu (only when <code>labelsEnabled</code>).</p>
+  <p><strong>Feature flag effects:</strong> <code>prioritiesEnabled === false</code> → checkbox rendered without priority color classes, Flag button hidden, Priority submenu hidden. <code>labelsEnabled === false</code> → label chips in Row 2 hidden, Tag button hidden, Labels submenu hidden. <code>foldersEnabled === false</code> → folder chip in Row 2 hidden (even when <code>showFolder === true</code>).</p>
   <p><strong>Deadline colors:</strong> overdue → <code>text-red-400</code>, today → <code>text-green-600</code>, tomorrow → <code>text-orange-400</code>, 2–7 days → <code>text-violet-400</code>, future → <code>text-muted-foreground</code>.</p>
 
   <h2>TaskChildren</h2>
@@ -1110,31 +1127,39 @@ sort(a, b):
   return a.sortTime.localeCompare(b.sortTime)</code></pre>
 
   <h2>Smart title parsing (<code>smartTitle.ts — parseSmartTitle</code>)</h2>
-  <pre><code>function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority):
+  <p>Accepts an optional <code>flags</code> object (<code>{ foldersEnabled?, labelsEnabled?, prioritiesEnabled? }</code>, all default <code>true</code>). Each token group is skipped when the corresponding flag is <code>false</code>.</p>
+  <pre><code>function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds, currentPriority,
+                         flags = { foldersEnabled: true, labelsEnabled: true, prioritiesEnabled: true }):
   title = raw
   folderId = currentFolderId
   labelIds = new Set(currentLabelIds)
   priority = currentPriority
 
   // @FolderName → case-insensitive match; unmatched token stays in title
-  title = title.replace(/@(\S+)/g, (match, name) =>
-    folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
-    if folder: folderId = folder.id; return ''
-    return match
-  )
+  // Skipped when flags.foldersEnabled === false
+  if flags.foldersEnabled:
+    title = title.replace(/@(\S+)/g, (match, name) =>
+      folder = folders.find(f => f.name.toLowerCase() == name.toLowerCase())
+      if folder: folderId = folder.id; return ''
+      return match
+    )
 
   // #LabelName → adds to labelIds; unmatched stays
-  title = title.replace(/#(\S+)/g, (match, name) =>
-    label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
-    if label: labelIds.add(label.id); return ''
-    return match
-  )
+  // Skipped when flags.labelsEnabled === false
+  if flags.labelsEnabled:
+    title = title.replace(/#(\S+)/g, (match, name) =>
+      label = labels.find(l => l.name.toLowerCase() == name.toLowerCase())
+      if label: labelIds.add(label.id); return ''
+      return match
+    )
 
   // !1 → urgent, !2 → important, !3 → normal
-  title = title.replace(/!([123])/g, (match, digit) =>
-    priority = { '1': 'urgent', '2': 'important', '3': 'normal' }[digit]
-    return ''
-  )
+  // Skipped when flags.prioritiesEnabled === false
+  if flags.prioritiesEnabled:
+    title = title.replace(/!([123])/g, (match, digit) =>
+      priority = { '1': 'urgent', '2': 'important', '3': 'normal' }[digit]
+      return ''
+    )
 
   return {
     title: title.replace(/\s{2,}/g, ' ').trim(),
