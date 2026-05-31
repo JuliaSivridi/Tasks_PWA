@@ -2,6 +2,7 @@
 
 [![Live PWA](https://img.shields.io/badge/Stler_Tasks-Live_PWA-E07E38?style=for-the-badge)](https://stler-tasks.vercel.app)
 [![Android App](https://img.shields.io/badge/Stler_Tasks-Android_App-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/JuliaSivridi/Tasks_Android)
+
 ![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite_7-646CFF?style=for-the-badge&logo=vite&logoColor=white)
