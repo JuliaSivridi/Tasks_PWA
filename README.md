@@ -1,5 +1,15 @@
 # Stler Tasks — PWA
 
+[![Live App](https://img.shields.io/badge/Live_App-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://stler-tasks.vercel.app)
+![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite_7-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Google Sheets](https://img.shields.io/badge/Google_Sheets_API-34A853?style=for-the-badge&logo=googlesheets&logoColor=white)
+![Google OAuth](https://img.shields.io/badge/OAuth_2.0-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
 A personal task manager built as a **Progressive Web App** — the companion app to [Stler Tasks Android](https://github.com/JuliaSivridi/Tasks_Android). Both apps share the same `db_tasks` Google Spreadsheet, so tasks, folders, and labels stay in sync between browser and phone automatically.
 
 **Live:** [stler-tasks.vercel.app](https://stler-tasks.vercel.app)
@@ -59,17 +69,17 @@ A personal task manager built as a **Progressive Web App** — the companion app
 
 | Layer | Technology |
 |---|---|
-| Framework | React 19 + TypeScript 5 |
-| Build | Vite 7 |
-| Styling | Tailwind CSS v3 + shadcn/ui |
-| State | Zustand 5 |
-| Remote storage | Google Sheets API v4 |
-| Auth | Google Identity Services (OAuth 2.0) |
-| Offline storage | Dexie.js (IndexedDB) |
-| Drag & drop | @dnd-kit |
-| Dates | date-fns |
-| PWA | vite-plugin-pwa (Workbox) |
-| Hosting | Vercel |
+| ⚛️ Framework | React 19 + TypeScript 5 |
+| ⚡ Build | Vite 7 |
+| 🎨 Styling | Tailwind CSS v3 + shadcn/ui |
+| 🗂️ State | Zustand 5 |
+| ☁️ Remote storage | Google Sheets API v4 |
+| 🔐 Auth | Google Identity Services (OAuth 2.0) |
+| 💾 Offline storage | Dexie.js (IndexedDB) |
+| ↕️ Drag & drop | @dnd-kit |
+| 📅 Dates | date-fns |
+| 📱 PWA | vite-plugin-pwa (Workbox) |
+| 🌐 Hosting | Vercel |
 
 ---
 
