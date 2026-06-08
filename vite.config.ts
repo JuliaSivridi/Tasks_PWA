@@ -14,7 +14,7 @@ export default defineConfig({
         short_name: 'Tasks',
         description: 'Personal task manager with Google Sheets sync',
         theme_color: '#e07e38',
-        background_color: '#ffffff',
+        background_color: '#e07e38',
         display: 'standalone',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
