@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'auth-storage',
+      name: 'tasks-pwa-auth',
       // Persist token so the user doesn't have to log in on every refresh.
       // Trade-off: XSS risk — acceptable for a personal single-user tool.
       partialize: (state) => ({
