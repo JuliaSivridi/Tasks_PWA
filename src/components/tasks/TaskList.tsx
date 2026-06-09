@@ -889,6 +889,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
 
 export function TaskList() {
   const { selectedView, selectedCalendarId, createTaskOpen, setCreateTaskOpen } = useUIStore()
+  const calendars = useCalendarStore(s => s.calendars)
   const [editingCalendarEvent, setEditingCalendarEvent] = useState<CalendarEvent | null>(null)
 
   const handleEditCalendarEvent = useCallback((event: CalendarEvent) => {
@@ -908,7 +909,11 @@ export function TaskList() {
     return <FolderView />
   }
 
-  const showFab = ['upcoming', 'all', 'folder', 'calendar'].includes(selectedView)
+  const calendarEditable = selectedView !== 'calendar' ||
+    ['owner', 'writer'].includes(
+      calendars.find(c => c.id === selectedCalendarId)?.accessRole ?? '',
+    )
+  const showFab = ['upcoming', 'all', 'folder', 'calendar'].includes(selectedView) && calendarEditable
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
