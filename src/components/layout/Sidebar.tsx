@@ -58,7 +58,7 @@ export function Sidebar() {
           onClick={() => setCreateTaskOpen(true)}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-base font-medium"
         >
-          + Add task
+          + Add new
         </button>
       </div>
 

@@ -980,11 +980,22 @@ export function TaskList() {
     return <FolderView />
   }
 
+  const showFab = ['upcoming', 'all', 'folder'].includes(selectedView)
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden relative">
       <div className="flex-1 overflow-y-auto">
         {renderContent()}
       </div>
+      {showFab && (
+        <button
+          onClick={() => setCreateTaskOpen(true)}
+          className="absolute bottom-5 right-5 z-20 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors active:scale-95"
+          aria-label="Add new"
+        >
+          <Plus size={24} />
+        </button>
+      )}
       <TaskCreateModal
         open={createTaskOpen || editingCalendarEvent !== null}
         editingEvent={editingCalendarEvent}
