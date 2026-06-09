@@ -1,6 +1,6 @@
 # Stler Tasks — PWA
 
-[![Live PWA](https://img.shields.io/badge/Stler_Tasks-Live_PWA-E07E38?style=for-the-badge)](https://stler-tasks.vercel.app)
+[![Live PWA](https://img.shields.io/badge/Stler_Tasks-Live_PWA-E07E38?style=for-the-badge)](https://juliasivridi.github.io/Tasks_PWA/)
 [![Android App](https://img.shields.io/badge/Stler_Tasks-Android_App-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/JuliaSivridi/Tasks_Android)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -10,11 +10,11 @@
 ![Google Sheets](https://img.shields.io/badge/Google_Sheets_API-34A853?style=for-the-badge&logo=googlesheets&logoColor=white)
 ![Google OAuth](https://img.shields.io/badge/OAuth_2.0-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-181717?style=for-the-badge&logo=github&logoColor=white)
 
 A personal task manager built as a **Progressive Web App** — the companion app to [Stler Tasks Android](https://github.com/JuliaSivridi/Tasks_Android). Both apps share the same `db_tasks` Google Spreadsheet, so tasks, folders, and labels stay in sync between browser and phone automatically.
 
-**Live:** [stler-tasks.vercel.app](https://stler-tasks.vercel.app)
+**Live:** [juliasivridi.github.io/Tasks_PWA](https://juliasivridi.github.io/Tasks_PWA/)
 
 ---
 
@@ -81,7 +81,7 @@ A personal task manager built as a **Progressive Web App** — the companion app
 | ↕️ Drag & drop | @dnd-kit |
 | 📅 Dates | date-fns |
 | 📱 PWA | vite-plugin-pwa (Workbox) |
-| 🌐 Hosting | Vercel |
+| 🌐 Hosting | GitHub Pages |
 
 ---
 
@@ -139,15 +139,15 @@ Row 1 of every sheet is a header row. Deleted rows are cleared (all cells emptie
 3. Add to **Authorized JavaScript origins** (not Redirect URIs):
    ```
    http://localhost:5173
-   https://your-app.vercel.app
+   https://your-username.github.io
    ```
 4. Add your Google account as a **test user** in the OAuth consent screen
 
 ### Local Development
 
 ```bash
-git clone https://github.com/JuliaSivridi/Tasks.git
-cd Tasks
+git clone https://github.com/JuliaSivridi/Tasks_PWA.git
+cd Tasks_PWA
 npm install
 ```
 
@@ -161,11 +161,13 @@ npm run dev    # http://localhost:5173
 npm run build  # production build
 ```
 
-### Deploy to Vercel
+### Deploy to GitHub Pages
 
-1. Import the repository at [vercel.com](https://vercel.com)
-2. Add `VITE_GOOGLE_CLIENT_ID` in project Settings → Environment Variables
-3. Every push to `main` triggers automatic deployment
+Deployment is automated via GitHub Actions on every push to `main`.
+
+1. Repo → Settings → Pages → Source: **GitHub Actions**
+2. Repo → Settings → Secrets → Actions → add `VITE_GOOGLE_CLIENT_ID` (and `VITE_FEEDBACK_URL` if used)
+3. Push to `main` — the workflow builds and deploys automatically
 
 ---
 
