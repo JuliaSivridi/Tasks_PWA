@@ -1,19 +1,17 @@
 import { create } from 'zustand'
 
-export type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'completed' | 'calendar'
+export type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed' | 'calendar'
 
 interface UIState {
   selectedView: SelectedView
   selectedFolderId: string | null
-  selectedLabelId: string | null
-  selectedPriority: string | null
   selectedCalendarId: string | null
   sidebarOpen: boolean
   createTaskOpen: boolean
   settingsOpen: boolean
   helpOpen: boolean
   feedbackOpen: boolean
-  setView: (view: SelectedView, id?: string) => void
+  setView: (view: Exclude<SelectedView, 'calendar'>, id?: string) => void
   setCalendarView: (calendarId: string) => void
   setSidebarOpen: (v: boolean) => void
   setCreateTaskOpen: (v: boolean) => void
@@ -25,8 +23,6 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   selectedView: 'upcoming',
   selectedFolderId: null,
-  selectedLabelId: null,
-  selectedPriority: null,
   selectedCalendarId: null,
   sidebarOpen: false,
   createTaskOpen: false,
@@ -37,8 +33,6 @@ export const useUIStore = create<UIState>((set) => ({
   setView: (view, id) => set({
     selectedView: view,
     selectedFolderId: view === 'folder' ? (id ?? null) : null,
-    selectedLabelId: view === 'label' ? (id ?? null) : null,
-    selectedPriority: view === 'priority' ? (id ?? null) : null,
     selectedCalendarId: null,
   }),
 
@@ -46,8 +40,6 @@ export const useUIStore = create<UIState>((set) => ({
     selectedView: 'calendar',
     selectedCalendarId: calendarId,
     selectedFolderId: null,
-    selectedLabelId: null,
-    selectedPriority: null,
   }),
 
   setSidebarOpen: (v) => set({ sidebarOpen: v }),

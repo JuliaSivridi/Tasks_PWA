@@ -6,7 +6,6 @@ import {
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
-import { useLabelsStore } from '@/store/labelsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { flush, clearLocalData } from '@/services/syncService'
@@ -21,22 +20,17 @@ export function Header() {
   }
   const {
     setSidebarOpen, sidebarOpen,
-    selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId,
+    selectedView, selectedFolderId, selectedCalendarId,
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     feedbackOpen, setFeedbackOpen,
   } = useUIStore()
   const { folders } = useFoldersStore()
-  const { labels } = useLabelsStore()
   const { calendars } = useCalendarStore()
-
-  const PRIORITY_LABELS: Record<string, string> = { urgent: 'Urgent', important: 'Important', normal: 'Normal' }
 
   const viewTitle = selectedView === 'upcoming' ? 'Upcoming'
     : selectedView === 'all' ? 'All tasks'
     : selectedView === 'completed' ? 'Completed'
-    : selectedView === 'label' ? (labels.find(l => l.id === selectedLabelId)?.name ?? 'Label')
-    : selectedView === 'priority' ? (PRIORITY_LABELS[selectedPriority ?? ''] ?? 'Priority')
     : selectedView === 'calendar' ? (calendars.find(c => c.id === selectedCalendarId)?.summary ?? 'Calendar')
     : (folders.find(f => f.id === selectedFolderId)?.name ?? 'Folder')
 

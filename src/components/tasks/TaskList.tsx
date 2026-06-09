@@ -20,7 +20,7 @@ import { TaskCreateModal } from './TaskCreateModal'
 import { CalendarEventItem } from '@/components/calendar/CalendarEventItem'
 import {
   useUpcomingGroupsWithEvents, useCalendarEvents, useFilteredRootTasks,
-  useCompletedTasks, useAllTasks, useLabelTasks, usePriorityTasks,
+  useCompletedTasks, useAllTasks,
   type MergedItem,
 } from '@/hooks/useTasks'
 import { useUIStore } from '@/store/uiStore'
@@ -716,76 +716,6 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
   )
 }
 
-// ── Label view ────────────────────────────────────────────────────────────────
-
-function LabelView() {
-  const labelTasks = useLabelTasks()
-  const { setCreateTaskOpen } = useUIStore()
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
-  const [labelFilter, setLabelFilter] = useState<string[]>([])
-  const [folderFilter, setFolderFilter] = useState<string[]>([])
-  const [calendarFilter, setCalendarFilter] = useState<string[]>([])
-
-  const filtered = applyFilters(labelTasks, priorityFilter, labelFilter, folderFilter)
-
-  return (
-    <div className="flex flex-col h-full">
-      <FilterBar
-        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
-        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
-        calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
-        onClearAll={() => {
-          setPriorityFilter([]); setLabelFilter([])
-          setFolderFilter([]); setCalendarFilter([])
-        }}
-      />
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
-          <FolderOpen size={40} className="opacity-20" />
-          <p>No tasks</p>
-          <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
-            <Plus size={16} className="mr-1" /> Add task
-          </Button>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-2">
-          {filtered.map(task => (
-            <TaskItem key={task.id} task={task} depth={0} showFolder hideChildren hideLabels />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Priority view ─────────────────────────────────────────────────────────────
-
-function PriorityView() {
-  const priorityTasks = usePriorityTasks()
-  const { setCreateTaskOpen } = useUIStore()
-
-  return (
-    <div className="flex flex-col h-full">
-      {priorityTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
-          <FolderOpen size={40} className="opacity-20" />
-          <p>No tasks</p>
-          <Button variant="ghost" size="sm" onClick={() => setCreateTaskOpen(true)}>
-            <Plus size={16} className="mr-1" /> Add task
-          </Button>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-2">
-          {priorityTasks.map(task => (
-            <TaskItem key={task.id} task={task} depth={0} showFolder hideChildren />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Completed view ────────────────────────────────────────────────────────────
 
 function CompletedView() {
@@ -973,14 +903,12 @@ export function TaskList() {
   const renderContent = () => {
     if (selectedView === 'upcoming') return <UpcomingView onEditCalendarEvent={handleEditCalendarEvent} />
     if (selectedView === 'all') return <AllTasksView onEditCalendarEvent={handleEditCalendarEvent} />
-    if (selectedView === 'label') return <LabelView />
-    if (selectedView === 'priority') return <PriorityView />
     if (selectedView === 'completed') return <CompletedView />
     if (selectedView === 'calendar') return <CalendarEventListView onEditCalendarEvent={handleEditCalendarEvent} />
     return <FolderView />
   }
 
-  const showFab = ['upcoming', 'all', 'folder'].includes(selectedView)
+  const showFab = ['upcoming', 'all', 'folder', 'calendar'].includes(selectedView)
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">

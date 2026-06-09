@@ -126,52 +126,6 @@ export function useAllTasks() {
   }, [tasks])
 }
 
-// ── Label view: pending tasks filtered by label, sorted by priority → deadline ─
-export function useLabelTasks() {
-  const tasks = useTasksStore((s) => s.tasks)
-  const { selectedLabelId } = useUIStore()
-
-  return useMemo(() => {
-    if (!selectedLabelId) return []
-    return tasks
-      .filter(t => t.status === 'pending' && t.labels.split(',').filter(Boolean).includes(selectedLabelId))
-      .sort((a, b) => {
-        const pa = PRIORITY_ORDER[a.priority] ?? 2
-        const pb = PRIORITY_ORDER[b.priority] ?? 2
-        if (pa !== pb) return pa - pb
-        if (a.deadline_date && b.deadline_date) {
-          const dc = a.deadline_date.localeCompare(b.deadline_date)
-          if (dc !== 0) return dc
-          return (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99')
-        }
-        if (a.deadline_date) return -1
-        if (b.deadline_date) return 1
-        return a.created_at.localeCompare(b.created_at)
-      })
-  }, [tasks, selectedLabelId])
-}
-
-// ── Priority view: pending tasks filtered by priority, sorted by deadline ─────
-export function usePriorityTasks() {
-  const tasks = useTasksStore((s) => s.tasks)
-  const { selectedPriority } = useUIStore()
-
-  return useMemo(() => {
-    if (!selectedPriority) return []
-    return tasks
-      .filter(t => t.status === 'pending' && t.priority === selectedPriority)
-      .sort((a, b) => {
-        if (a.deadline_date && b.deadline_date) {
-          const dc = a.deadline_date.localeCompare(b.deadline_date)
-          if (dc !== 0) return dc
-          return (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99')
-        }
-        if (a.deadline_date) return -1
-        if (b.deadline_date) return 1
-        return a.created_at.localeCompare(b.created_at)
-      })
-  }, [tasks, selectedPriority])
-}
 
 // ── F-01: Upcoming + events, merged by day ────────────────────────────────────
 export function useUpcomingGroupsWithEvents(): MergedGroup[] {
