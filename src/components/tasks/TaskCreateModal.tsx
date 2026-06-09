@@ -57,6 +57,8 @@ interface Props {
   editing?: Task | null
   editingEvent?: CalendarEvent | null
   parentId?: string
+  defaultMode?: 'task' | 'event'
+  defaultCalendarId?: string
   onClose: () => void
 }
 
@@ -135,7 +137,9 @@ function EditRecurringDialog({
 // ── TaskCreateModal ───────────────────────────────────────────────────────────
 
 export function TaskCreateModal({
-  open, editing, editingEvent, parentId = '', onClose,
+  open, editing, editingEvent, parentId = '',
+  defaultMode, defaultCalendarId,
+  onClose,
 }: Props) {
   const { addTask, updateTask } = useTasksStore()
   const { selectedFolderId, selectedView } = useUIStore()
@@ -293,7 +297,7 @@ export function TaskCreateModal({
         recur_value: editing.recur_value || 1,
       })
     } else {
-      // New task / new event (show with task mode by default)
+      // New task / new event
       reset({
         title: '', priority: 'normal', parent_id: parentId,
         folder_id: defaultFolderId(),
@@ -301,9 +305,10 @@ export function TaskCreateModal({
         deadline_date: '', deadline_time: '',
         is_recurring: false, recur_type: 'days', recur_value: 1,
       })
-      setFormMode('task')
-      // Pre-select first enabled calendar for convenience
-      if (enabledCalendars[0]) setEventCalendarId(enabledCalendars[0].id)
+      setFormMode(defaultMode ?? 'task')
+      // Pre-select calendar: use explicit default, then fall back to first enabled
+      const calId = defaultCalendarId ?? enabledCalendars[0]?.id ?? ''
+      setEventCalendarId(calId)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing, editingEvent, parentId, reset])

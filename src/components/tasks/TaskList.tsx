@@ -888,7 +888,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
 // ── Main TaskList ─────────────────────────────────────────────────────────────
 
 export function TaskList() {
-  const { selectedView, createTaskOpen, setCreateTaskOpen } = useUIStore()
+  const { selectedView, selectedCalendarId, createTaskOpen, setCreateTaskOpen } = useUIStore()
   const [editingCalendarEvent, setEditingCalendarEvent] = useState<CalendarEvent | null>(null)
 
   const handleEditCalendarEvent = useCallback((event: CalendarEvent) => {
@@ -927,6 +927,8 @@ export function TaskList() {
       <TaskCreateModal
         open={createTaskOpen || editingCalendarEvent !== null}
         editingEvent={editingCalendarEvent}
+        defaultMode={selectedView === 'calendar' ? 'event' : undefined}
+        defaultCalendarId={selectedView === 'calendar' ? (selectedCalendarId ?? undefined) : undefined}
         onClose={handleModalClose}
       />
     </div>
