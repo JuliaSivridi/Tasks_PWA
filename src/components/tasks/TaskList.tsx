@@ -909,11 +909,10 @@ export function TaskList() {
     return <FolderView />
   }
 
-  const calendarEditable = selectedView !== 'calendar' ||
-    ['owner', 'writer'].includes(
-      calendars.find(c => c.id === selectedCalendarId)?.accessRole ?? '',
-    )
-  const showFab = ['upcoming', 'all', 'folder', 'calendar'].includes(selectedView) && calendarEditable
+  const calendarEditable = ['owner', 'writer'].includes(
+    calendars.find(c => c.id === selectedCalendarId)?.accessRole ?? '',
+  )
+  const showFab = true
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
@@ -932,8 +931,8 @@ export function TaskList() {
       <TaskCreateModal
         open={createTaskOpen || editingCalendarEvent !== null}
         editingEvent={editingCalendarEvent}
-        defaultMode={selectedView === 'calendar' ? 'event' : undefined}
-        defaultCalendarId={selectedView === 'calendar' ? (selectedCalendarId ?? undefined) : undefined}
+        defaultMode={selectedView === 'calendar' && calendarEditable ? 'event' : undefined}
+        defaultCalendarId={selectedView === 'calendar' && calendarEditable ? (selectedCalendarId ?? undefined) : undefined}
         onClose={handleModalClose}
       />
     </div>
