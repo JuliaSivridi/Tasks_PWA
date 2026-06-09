@@ -1,6 +1,6 @@
 # Tasks PWA — Technical Specification
 
-> Version 0.0.0 · Branch: main · Generated: 2026-05-30
+> Version 0.0.0 · Branch: main · Generated: 2026-06-09
 
 ---
 
@@ -36,7 +36,7 @@ Tasks PWA is a personal task manager that stores all data in the user's own Goog
 - **Last-write-wins conflict resolution.** When pulling from Sheets, `updated_at` timestamps are compared per entity; the newer record wins.
 - **Calendar integration is opt-in.** Google Calendar events are fetched separately via the Calendar API and merged into task views. This feature requires additional OAuth scope (`https://www.googleapis.com/auth/calendar`) and is enabled per user in Settings.
 - **No router.** Views are switched by a Zustand `uiStore` (`SelectedView` union type). The URL never changes.
-- **Token persistence in localStorage.** The GIS OAuth2 token is stored in `localStorage` (key `auth-storage`) to avoid prompting on every page load. This is an acknowledged XSS trade-off noted in the code.
+- **Token persistence in localStorage.** The GIS OAuth2 token is stored in `localStorage` (key `tasks-pwa-auth`) to avoid prompting on every page load. This is an acknowledged XSS trade-off noted in the code.
 
 This spec covers everything that can be confirmed by reading the source code.
 
@@ -207,11 +207,11 @@ Tasks-PWA/
     │   ├── calendarStore.ts    events[], calendars[], setEvents, upsertEvent, removeEvent
     │   ├── prefsStore.ts       sectionOpen, calendarEnabled, enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled; saves to settings sheet
     │   ├── syncStore.ts        isSyncing, isOnline, lastSyncAt, pendingCount, syncError
-    │   └── uiStore.ts          selectedView, selectedFolderId, selectedLabelId, selectedPriority, selectedCalendarId
+    │   └── uiStore.ts          selectedView, selectedFolderId, selectedCalendarId
     ├── hooks/
     │   ├── useSync.ts          online/offline/visibilitychange/pagehide event handlers
-    │   └── useTasks.ts         useUpcomingGroups, useUpcomingGroupsWithEvents, useAllTasks, useLabelTasks,
-    │                           usePriorityTasks, useCalendarEvents, useCompletedTasks, useFilteredRootTasks
+    │   └── useTasks.ts         useUpcomingGroups, useUpcomingGroupsWithEvents, useAllTasks,
+    │                           useCalendarEvents, useCompletedTasks, useFilteredRootTasks
     └── components/
         ├── layout/
         │   ├── AppShell.tsx    Top-level shell: Header + Sidebar + main content
@@ -605,20 +605,6 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 - **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
 - **User actions:** all TaskItem actions; reorder by drag; re-parent by drag-right.
 
-### LabelView
-
-- **Data:** `useLabelTasks()` — pending tasks whose `labels` field includes `selectedLabelId`, sorted by priority → deadline → created_at.
-- **Filters:** `FilterBar` (priority, label, folder; calendar filter shown but events not included).
-- **Layout:** flat list; `hideLabels` is true on `TaskItem`.
-- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
-
-### PriorityView
-
-- **Data:** `usePriorityTasks()` — pending tasks with `priority === selectedPriority`, sorted by deadline → created_at.
-- **No filter bar.**
-- **Layout:** flat list; `hideChildren` is true.
-- **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" button.
-
 ### CompletedView
 
 - **Data:** `useCompletedTasks()` — all tasks with `status === 'completed'`, sorted by `completed_at` or `updated_at` descending.
@@ -664,6 +650,16 @@ Static content page with sections: Getting started, Tasks, Views, Calendar & eve
 
 ## 10. Key Components
 
+### FAB (Floating Action Button)
+
+A round `+` button (`w-14 h-14`, `rounded-full`, `bg-primary`, `absolute bottom-5 right-5 z-20`) rendered inside `TaskList` for all views. Behaviour by view:
+
+| View | Opens modal in |
+|---|---|
+| Upcoming / All Tasks / Folder / Completed | Task mode (default) |
+| Calendar (owner or writer access) | Event mode, current calendar pre-selected |
+| Calendar (reader / freeBusyReader) | Task mode (default) |
+
 ### TaskItem
 
 | Prop | Type | Default | Description |
@@ -699,9 +695,9 @@ Renders a `DndContext` + `SortableContext` (vertical list). Drag-and-drop reorde
 
 ### TaskCreateModal
 
-**Props:** `open: boolean`, `editing?: Task | null`, `editingEvent?: CalendarEvent | null`, `parentId?: string`, `onClose: () => void`.
+**Props:** `open: boolean`, `editing?: Task | null`, `editingEvent?: CalendarEvent | null`, `parentId?: string`, `defaultMode?: 'task' | 'event'`, `defaultCalendarId?: string`, `onClose: () => void`.
 
-Two modes: **task mode** and **event mode**. A toggle tab appears when creating a new item and `calendarEnabled && enabledCalendars.length > 0`.
+Two modes: **task mode** and **event mode**. A toggle tab appears when creating a new item and `calendarEnabled && enabledCalendars.length > 0`. `defaultMode` and `defaultCalendarId` pre-select the mode and calendar when the modal opens for a new item (used by the FAB on Calendar views).
 
 **Task mode fields:** title (with smart-title parsing on submit), due date, time, repeat (every N days/weeks/months/years), folder picker (separate Dialog), labels picker (bottom Sheet with inline label creation), priority chips. Clear button clears deadline + recurrence. Postpone button (visible when editing recurring task) advances deadline by one interval.
 
@@ -848,18 +844,16 @@ The app has **no URL-based router**. All navigation is managed by `uiStore` (Zus
 ### SelectedView type (`src/store/uiStore.ts`)
 
 ```ts
-type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'completed' | 'calendar'
+type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed' | 'calendar'
 ```
 
 ### View activation
 
 | Method | Effect |
 |--------|--------|
-| `setView('upcoming')` | Shows UpcomingView; clears folder/label/priority/calendar IDs |
+| `setView('upcoming')` | Shows UpcomingView; clears folder/calendar IDs |
 | `setView('all')` | Shows AllTasksView |
 | `setView('folder', folderId)` | Shows FolderView for the given folder |
-| `setView('label', labelId)` | Shows LabelView for the given label |
-| `setView('priority', 'urgent'\|'important'\|'normal')` | Shows PriorityView |
 | `setView('completed')` | Shows CompletedView |
 | `setCalendarView(calendarId)` | Shows CalendarEventListView for the given calendar |
 
@@ -904,8 +898,6 @@ No skeleton/shimmer animations exist. Loading progress is shown only via `SyncSt
 | UpcomingView | `FolderOpen size=40 opacity-20` | "No upcoming tasks" | "+ Add task" → `setCreateTaskOpen(true)` |
 | FolderView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
 | AllTasksView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
-| LabelView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
-| PriorityView | `FolderOpen size=40 opacity-20` | "No tasks" | "+ Add task" |
 | CompletedView | `FolderOpen size=40 opacity-20` | "No completed tasks" | — |
 | CalendarEventListView (disabled) | `CalendarDays size=40 opacity-20` | "Enable Google Calendar in Settings to see events here." | — |
 | CalendarEventListView (no events) | `CalendarDays size=40 opacity-20` | "No events" | — |
@@ -914,7 +906,19 @@ No skeleton/shimmer animations exist. Loading progress is shown only via `SyncSt
 
 ## 14. CI/CD & Build
 
-No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase. Build is run manually with `npm run build` (`tsc -b && vite build`). Preview with `npm run preview`.
+Deployment is automated via GitHub Actions. The workflow file is `.github/workflows/deploy.yml`.
+
+**Trigger:** push to `main` branch (or manual `workflow_dispatch`).
+
+**Jobs:**
+1. **build** — checks out code, installs Node 20, runs `npm ci`, runs `npm run build` (with `VITE_GOOGLE_CLIENT_ID` and `VITE_FEEDBACK_URL` from repository secrets), uploads `dist/` as a Pages artifact.
+2. **deploy** — deploys the artifact to GitHub Pages using `actions/deploy-pages`.
+
+**Live URL:** `https://juliasivridi.github.io/Tasks_PWA/`
+
+**Vite base:** `base: '/Tasks_PWA/'` is set in `vite.config.ts` so all asset paths resolve correctly under the subpath. PWA icon paths use relative form (`icons/icon-192.png`, no leading slash).
+
+Build is also available locally: `npm run build` (`tsc -b && vite build`). Preview with `npm run preview`.
 
 ---
 
@@ -970,7 +974,7 @@ npm run dev
 # → http://localhost:5173
 ```
 
-**6. First sign-in** — Click "Sign in with Google". On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Sheets file is created and seeded with sample data via `seedOnboarding()`. The spreadsheet ID is cached in `localStorage` (`auth-storage`).
+**6. First sign-in** — Click "Sign in with Google". On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Sheets file is created and seeded with sample data via `seedOnboarding()`. The spreadsheet ID is cached in `localStorage` (`tasks-pwa-auth`).
 
 ### Available scripts
 

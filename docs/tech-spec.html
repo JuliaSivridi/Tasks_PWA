@@ -228,7 +228,7 @@
   <div class="meta">
     <strong>Version</strong> 0.0.0<br>
     <strong>Branch</strong> main<br>
-    <strong>Generated</strong> 2026-05-30<br>
+    <strong>Generated</strong> 2026-06-09<br>
     <strong>Stack</strong> React 19 · Vite · Zustand · Dexie · Google Sheets API
   </div>
   <div class="inspiration">
@@ -270,7 +270,7 @@
     <li><strong>Last-write-wins conflict resolution.</strong> When pulling from Sheets, <code>updated_at</code> timestamps are compared per entity; the newer record wins.</li>
     <li><strong>Calendar integration is opt-in.</strong> Google Calendar events require additional OAuth scope (<code>https://www.googleapis.com/auth/calendar</code>) and are enabled per user in Settings.</li>
     <li><strong>No router.</strong> Views are switched by a Zustand <code>uiStore</code> (<code>SelectedView</code> union type). The URL never changes.</li>
-    <li><strong>Token persistence in localStorage.</strong> The GIS OAuth2 token is stored in <code>localStorage</code> (key <code>auth-storage</code>) to avoid prompting on every page load.</li>
+    <li><strong>Token persistence in localStorage.</strong> The GIS OAuth2 token is stored in <code>localStorage</code> (key <code>tasks-pwa-auth</code>) to avoid prompting on every page load.</li>
   </ul>
   <div class="note">This spec covers only facts confirmed by reading the actual source code.</div>
 
@@ -734,20 +734,6 @@ Tasks-PWA/<br>
     <li><strong>Empty state:</strong> <code>FolderOpen size=40 opacity-20</code> · "No tasks" · "+ Add task".</li>
   </ul>
 
-  <h2>LabelView</h2>
-  <ul>
-    <li><strong>Data:</strong> <code>useLabelTasks()</code> — pending tasks whose <code>labels</code> includes <code>selectedLabelId</code>, sorted by priority → deadline → created_at.</li>
-    <li><strong>Layout:</strong> flat list; <code>hideLabels={true}</code> on <code>TaskItem</code>.</li>
-    <li><strong>Empty state:</strong> <code>FolderOpen size=40 opacity-20</code> · "No tasks" · "+ Add task".</li>
-  </ul>
-
-  <h2>PriorityView</h2>
-  <ul>
-    <li><strong>Data:</strong> <code>usePriorityTasks()</code> — pending tasks with <code>priority === selectedPriority</code>, sorted by deadline → created_at.</li>
-    <li><strong>Layout:</strong> flat list; no filter bar; <code>hideChildren={true}</code>.</li>
-    <li><strong>Empty state:</strong> <code>FolderOpen size=40 opacity-20</code> · "No tasks" · "+ Add task".</li>
-  </ul>
-
   <h2>CompletedView</h2>
   <ul>
     <li><strong>Data:</strong> <code>useCompletedTasks()</code> — tasks with <code>status === 'completed'</code>, sorted by <code>completed_at</code> / <code>updated_at</code> descending.</li>
@@ -785,6 +771,17 @@ Tasks-PWA/<br>
   <!-- S10 -->
   <h1 id="s10" style="border-bottom:2px solid #e07e38;page-break-before:always">10. Key Components</h1>
 
+  <h2>FAB (Floating Action Button)</h2>
+  <p>Round <code>+</code> button (<code>w-14 h-14</code>, <code>rounded-full</code>, <code>bg-primary</code>, <code>absolute bottom-5 right-5 z-20</code>) rendered inside <code>TaskList</code> for all views. Behaviour by view:</p>
+  <table>
+    <thead><tr><th>View</th><th>Opens modal in</th></tr></thead>
+    <tbody>
+      <tr><td>Upcoming / All Tasks / Folder / Completed</td><td>Task mode (default)</td></tr>
+      <tr><td>Calendar (owner or writer access)</td><td>Event mode, current calendar pre-selected</td></tr>
+      <tr><td>Calendar (reader / freeBusyReader)</td><td>Task mode (default)</td></tr>
+    </tbody>
+  </table>
+
   <h2>TaskItem</h2>
   <table>
     <thead><tr><th>Prop</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
@@ -807,8 +804,8 @@ Tasks-PWA/<br>
   <p><strong>Props:</strong> <code>tasks: Task[]</code>, <code>depth: number</code>, <code>showFolder?: boolean</code>. Renders <code>DndContext</code> + <code>SortableContext</code>. Drag-and-drop reorders <code>sort_order</code> (×10 spacing). Drag-right (delta.x &gt; 50) re-parents.</p>
 
   <h2>TaskCreateModal</h2>
-  <p><strong>Props:</strong> <code>open</code>, <code>editing?: Task | null</code>, <code>editingEvent?: CalendarEvent | null</code>, <code>parentId?: string</code>, <code>onClose</code>.</p>
-  <p>Two modes — <strong>task</strong> and <strong>event</strong>. Toggle tab appears when <code>calendarEnabled &amp;&amp; enabledCalendars.length &gt; 0</code>.</p>
+  <p><strong>Props:</strong> <code>open</code>, <code>editing?: Task | null</code>, <code>editingEvent?: CalendarEvent | null</code>, <code>parentId?: string</code>, <code>defaultMode?: 'task' | 'event'</code>, <code>defaultCalendarId?: string</code>, <code>onClose</code>.</p>
+  <p>Two modes — <strong>task</strong> and <strong>event</strong>. Toggle tab appears when <code>calendarEnabled &amp;&amp; enabledCalendars.length &gt; 0</code>. <code>defaultMode</code> and <code>defaultCalendarId</code> pre-select the mode and calendar for new items (used by the FAB on Calendar views).</p>
   <p><strong>Task fields:</strong> title (smart-title parsed on submit), due date, time, repeat, folder picker, labels picker (with inline creation), priority chips. Clear clears deadline+recurrence. Postpone advances by one interval.</p>
   <p><strong>Event fields:</strong> title, date, start/end time, repeat with recurrence extras (weekly days, monthly pattern, ends). On save for recurring instances: <code>EditRecurringDialog</code> offers "this event only" or "all events".</p>
 
@@ -926,7 +923,7 @@ Tasks-PWA/<br>
   <div class="callout">The app has <strong>no URL-based router</strong>. All navigation is managed by <code>uiStore</code> (Zustand, in-memory only — not persisted). There are no route strings, no react-router, and no history API usage.</div>
 
   <h2>SelectedView type</h2>
-  <pre><code>type SelectedView = 'upcoming' | 'all' | 'folder' | 'label' | 'priority' | 'completed' | 'calendar'</code></pre>
+  <pre><code>type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed' | 'calendar'</code></pre>
 
   <h2>View activation</h2>
   <table>
@@ -935,8 +932,6 @@ Tasks-PWA/<br>
       <tr><td><code>setView('upcoming')</code></td><td>Shows UpcomingView; clears folder/label/priority/calendar IDs</td></tr>
       <tr><td><code>setView('all')</code></td><td>Shows AllTasksView</td></tr>
       <tr><td><code>setView('folder', folderId)</code></td><td>Shows FolderView for the given folder</td></tr>
-      <tr><td><code>setView('label', labelId)</code></td><td>Shows LabelView for the given label</td></tr>
-      <tr><td><code>setView('priority', value)</code></td><td>Shows PriorityView; value = <code>'urgent' | 'important' | 'normal'</code></td></tr>
       <tr><td><code>setView('completed')</code></td><td>Shows CompletedView</td></tr>
       <tr><td><code>setCalendarView(calendarId)</code></td><td>Shows CalendarEventListView for the given calendar</td></tr>
     </tbody>
@@ -978,8 +973,6 @@ Tasks-PWA/<br>
       <tr><td>UpcomingView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No upcoming tasks"</td><td>"+ Add task"</td></tr>
       <tr><td>FolderView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
       <tr><td>AllTasksView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
-      <tr><td>LabelView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
-      <tr><td>PriorityView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No tasks"</td><td>"+ Add task"</td></tr>
       <tr><td>CompletedView</td><td><code>FolderOpen size=40 opacity-20</code></td><td>"No completed tasks"</td><td>—</td></tr>
       <tr><td>CalendarEventListView (disabled)</td><td><code>CalendarDays size=40 opacity-20</code></td><td>"Enable Google Calendar in Settings to see events here."</td><td>—</td></tr>
       <tr><td>CalendarEventListView (no events)</td><td><code>CalendarDays size=40 opacity-20</code></td><td>"No events"</td><td>—</td></tr>
@@ -988,8 +981,16 @@ Tasks-PWA/<br>
 
   <!-- S14 -->
   <h1 id="s14" style="border-bottom:2px solid #e07e38;page-break-before:always">14. CI/CD &amp; Build</h1>
-  <div class="callout">No CI/CD configuration is present in the repository. There are no GitHub Actions workflows, Dockerfiles, or deployment scripts in the codebase.</div>
-  <p>Build is run manually with <code>npm run build</code> (<code>tsc -b &amp;&amp; vite build</code>). Preview with <code>npm run preview</code>.</p>
+  <p>Deployment is automated via GitHub Actions. Workflow: <code>.github/workflows/deploy.yml</code>.</p>
+  <p><strong>Trigger:</strong> push to <code>main</code> (or manual <code>workflow_dispatch</code>).</p>
+  <p><strong>Jobs:</strong></p>
+  <ol>
+    <li><strong>build</strong> — Node 20, <code>npm ci</code>, <code>npm run build</code> (secrets: <code>VITE_GOOGLE_CLIENT_ID</code>, <code>VITE_FEEDBACK_URL</code>), uploads <code>dist/</code> as Pages artifact.</li>
+    <li><strong>deploy</strong> — deploys artifact to GitHub Pages via <code>actions/deploy-pages</code>.</li>
+  </ol>
+  <p><strong>Live URL:</strong> <code>https://juliasivridi.github.io/Tasks_PWA/</code></p>
+  <p><strong>Vite base:</strong> <code>base: '/Tasks_PWA/'</code> in <code>vite.config.ts</code>. PWA icon paths are relative (no leading slash).</p>
+  <p>Local build: <code>npm run build</code> (<code>tsc -b &amp;&amp; vite build</code>). Preview: <code>npm run preview</code>.</p>
 
   <!-- S15 -->
   <h1 id="s15" style="border-bottom:2px solid #e07e38;page-break-before:always">15. First-Time Setup (New Developer)</h1>
@@ -1024,7 +1025,7 @@ npm install</code></pre>
       <pre><code>npm run dev
 # → http://localhost:5173</code></pre>
     </li>
-    <li><strong>First sign-in</strong> — Click "Sign in with Google". <code>ensureSpreadsheet()</code> searches Drive for <code>db_tasks</code>; if not found, creates it and seeds sample data. Spreadsheet ID is cached in <code>localStorage</code> (<code>auth-storage</code>).</li>
+    <li><strong>First sign-in</strong> — Click "Sign in with Google". <code>ensureSpreadsheet()</code> searches Drive for <code>db_tasks</code>; if not found, creates it and seeds sample data. Spreadsheet ID is cached in <code>localStorage</code> (<code>tasks-pwa-auth</code>).</li>
   </ol>
 
   <h2>Available scripts</h2>
