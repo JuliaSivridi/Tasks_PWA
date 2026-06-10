@@ -11,7 +11,7 @@ interface LabelsState {
   updateLabel: (id: string, changes: Partial<Label>) => Promise<void>
   renameLabel: (id: string, name: string) => Promise<void>
   deleteLabel: (id: string) => Promise<void>
-  upsertMany: (labels: Label[]) => Promise<void>
+  upsertMany: (labels: Label[], protectedIds?: Set<string>) => Promise<void>
 }
 
 export const useLabelsStore = create<LabelsState>((set, get) => ({
@@ -58,8 +58,17 @@ export const useLabelsStore = create<LabelsState>((set, get) => ({
     void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
-  upsertMany: async (labels) => {
-    await db.labels.bulkPut(labels)
-    set({ labels: labels.slice().sort((a, b) => a.sort_order - b.sort_order) })
+  upsertMany: async (labels, protectedIds) => {
+    // Prune labels deleted on another device (row cleared in Sheets),
+    // but keep entities that still have unsent local changes in the queue
+    const existing = await db.labels.toArray()
+    const incomingIds = new Set(labels.map(l => l.id))
+    const toDelete = existing
+      .filter(l => !incomingIds.has(l.id) && !protectedIds?.has(l.id))
+      .map(l => l.id)
+    if (toDelete.length > 0) await db.labels.bulkDelete(toDelete)
+    await db.labels.bulkPut(labels.filter(l => !protectedIds?.has(l.id)))
+    const all = await db.labels.toArray()
+    set({ labels: all.sort((a, b) => a.sort_order - b.sort_order) })
   },
 }))

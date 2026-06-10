@@ -5,7 +5,10 @@ const SCOPES = [
   'profile',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/drive.metadata.readonly',
-  'https://www.googleapis.com/auth/calendar',
+  // calendar.readonly = list calendars + read events; calendar.events = create/edit events.
+  // Narrower than the full 'calendar' scope (no access to calendar settings/sharing).
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
 ].join(' ')
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 

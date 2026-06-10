@@ -27,6 +27,14 @@ export async function updateFolder(folder: Folder): Promise<void> {
   })
 }
 
+/** Clears the folder's row (same delete mechanism as the Android client).
+    The emptied row disappears from parsing; clients prune it locally on pull. */
+export async function clearFolderRow(folderId: string): Promise<void> {
+  const rowNum = await findRowIndex(SHEET_FOLDERS, folderId)
+  if (!rowNum) return
+  await sheetsRequest('POST', `values/${SHEET_FOLDERS}!A${rowNum}:D${rowNum}:clear`, {})
+}
+
 export async function ensureFolderHeader(): Promise<void> {
   const data = await sheetsRequest<SheetsGetResponse>('GET', `values/${SHEET_FOLDERS}!A1:D1`)
   if (!data.values || data.values.length === 0) {

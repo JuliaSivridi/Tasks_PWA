@@ -27,6 +27,13 @@ export async function updateLabel(label: Label): Promise<void> {
   })
 }
 
+/** Clears the label's row (same delete mechanism as the Android client). */
+export async function clearLabelRow(labelId: string): Promise<void> {
+  const rowNum = await findRowIndex(SHEET_LABELS, labelId)
+  if (!rowNum) return
+  await sheetsRequest('POST', `values/${SHEET_LABELS}!A${rowNum}:D${rowNum}:clear`, {})
+}
+
 export async function ensureLabelHeader(): Promise<void> {
   const data = await sheetsRequest<SheetsGetResponse>('GET', `values/${SHEET_LABELS}!A1:D1`)
   if (!data.values || data.values.length === 0) {

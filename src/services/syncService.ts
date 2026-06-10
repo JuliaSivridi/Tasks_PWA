@@ -1,6 +1,6 @@
 import { fetchAllTasks, appendTask, updateTask as apiUpdateTask, ensureHeader } from '@/api/tasksApi'
-import { fetchAllFolders, appendFolder, updateFolder as apiUpdateFolder, ensureFolderHeader } from '@/api/foldersApi'
-import { fetchAllLabels, appendLabel, updateLabel as apiUpdateLabel, ensureLabelHeader } from '@/api/labelsApi'
+import { fetchAllFolders, appendFolder, updateFolder as apiUpdateFolder, ensureFolderHeader, clearFolderRow } from '@/api/foldersApi'
+import { fetchAllLabels, appendLabel, updateLabel as apiUpdateLabel, ensureLabelHeader, clearLabelRow } from '@/api/labelsApi'
 import { getPending, markProcessing, markDone, markFailed, getQueueLength } from '@/services/offlineQueue'
 import { invalidateRowCache } from '@/api/sheetsClient'
 import { listCalendars, listEvents } from '@/api/calendarApi'
@@ -48,10 +48,12 @@ async function processQueueItem(item: NonNullable<Awaited<ReturnType<typeof getP
     const folder = payload as unknown as Folder
     if (operationType === 'create') await appendFolder(folder)
     else if (operationType === 'update') await apiUpdateFolder(folder)
+    else if (operationType === 'delete') await clearFolderRow(item.entityId)
   } else if (entityType === 'label') {
     const label = payload as unknown as Label
     if (operationType === 'create') await appendLabel(label)
     else if (operationType === 'update') await apiUpdateLabel(label)
+    else if (operationType === 'delete') await clearLabelRow(item.entityId)
   }
 }
 
@@ -134,16 +136,21 @@ export async function pullCalendar(): Promise<void> {
 }
 
 export async function pull(): Promise<void> {
+  // Another device may have reordered/removed rows since we cached their numbers
+  invalidateRowCache()
   const [tasks, folders, labels] = await Promise.all([
     fetchAllTasks(),
     fetchAllFolders(),
     fetchAllLabels(),
   ])
 
+  // Entities with unsent local changes must survive the pull untouched
+  const pendingIds = new Set((await getPending()).map(i => i.entityId))
+
   await Promise.all([
     useTasksStore.getState().upsertMany(tasks),
-    useFoldersStore.getState().upsertMany(folders),
-    useLabelsStore.getState().upsertMany(labels),
+    useFoldersStore.getState().upsertMany(folders, pendingIds),
+    useLabelsStore.getState().upsertMany(labels, pendingIds),
   ])
 
   useSyncStore.getState().setLastSyncAt(now())

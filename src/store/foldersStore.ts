@@ -11,7 +11,7 @@ interface FoldersState {
   addFolder: (input: FolderInput) => Promise<Folder>
   updateFolder: (id: string, changes: Partial<Folder>) => Promise<void>
   deleteFolder: (id: string) => Promise<void>
-  upsertMany: (folders: Folder[]) => Promise<void>
+  upsertMany: (folders: Folder[], protectedIds?: Set<string>) => Promise<void>
   ensureInbox: () => Promise<void>
 }
 
@@ -49,8 +49,16 @@ export const useFoldersStore = create<FoldersState>((set, get) => ({
     void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
-  upsertMany: async (folders) => {
-    await db.folders.bulkPut(folders)
+  upsertMany: async (folders, protectedIds) => {
+    // Prune folders deleted on another device (row cleared in Sheets),
+    // but keep entities that still have unsent local changes in the queue
+    const existing = await db.folders.toArray()
+    const incomingIds = new Set(folders.map(f => f.id))
+    const toDelete = existing
+      .filter(f => !incomingIds.has(f.id) && !protectedIds?.has(f.id))
+      .map(f => f.id)
+    if (toDelete.length > 0) await db.folders.bulkDelete(toDelete)
+    await db.folders.bulkPut(folders.filter(f => !protectedIds?.has(f.id)))
     const all = await db.folders.toArray()
     set({ folders: all })
   },
