@@ -3,8 +3,9 @@ import { useAuthStore, setTokenClient, resolveTokenRequest, rejectTokenRequest }
 const SCOPES = [
   'email',
   'profile',
-  'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/drive.metadata.readonly',
+  // drive.file: access only to files this app created or the user picked via
+  // the Google Picker — the app can no longer see the rest of Drive/Sheets.
+  'https://www.googleapis.com/auth/drive.file',
   // calendar.readonly = list calendars + read events; calendar.events = create/edit events.
   // Narrower than the full 'calendar' scope (no access to calendar settings/sharing).
   'https://www.googleapis.com/auth/calendar.readonly',

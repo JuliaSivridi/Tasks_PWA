@@ -1,3 +1,8 @@
+// Spreadsheet setup under the drive.file scope: the app can only see files
+// it created itself or that the user picked via the Google Picker. There is
+// deliberately NO silent find-by-name and NO silent create — on first run
+// the user explicitly chooses "create new" or "pick existing" (AppShell).
+
 import { useAuthStore } from '@/store/authStore'
 
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets'
@@ -5,39 +10,31 @@ const DRIVE_BASE = 'https://www.googleapis.com/drive/v3'
 const SPREADSHEET_TITLE = 'db_tasks'
 
 /**
- * Ensures a spreadsheet named "db_tasks" exists in the user's Google Drive.
- * Priority: authStore.spreadsheetId (localStorage) > Drive search > create new.
- * The found/created spreadsheet ID and name are saved to authStore (persisted in localStorage).
- * Returns { isNew: true } when a new spreadsheet was just created (first run).
+ * 'ready' — the stored spreadsheet id is accessible.
+ * 'setup' — no spreadsheet yet, or access was lost (scope migration) →
+ *           AppShell shows the setup screen.
  */
-export async function ensureSpreadsheet(): Promise<{ isNew: boolean }> {
+export async function checkSpreadsheet(): Promise<'ready' | 'setup'> {
   const { spreadsheetId, setSpreadsheet, accessToken } = useAuthStore.getState()
+  if (!spreadsheetId) return 'setup'
+  if (!accessToken) throw new Error('Not authenticated')
 
-  // Already have an ID stored locally
-  if (spreadsheetId) return { isNew: false }
-
-  if (!accessToken) throw new Error('Cannot find/create spreadsheet: not authenticated')
-
-  // Search for existing spreadsheet by name in Google Drive
-  const query = encodeURIComponent(
-    `name='${SPREADSHEET_TITLE}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
-  )
-  const listRes = await fetch(`${DRIVE_BASE}/files?q=${query}&fields=files(id,name)`, {
+  const res = await fetch(`${DRIVE_BASE}/files/${spreadsheetId}?fields=id,name`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
-
-  if (!listRes.ok) {
-    const err = await listRes.json().catch(() => ({})) as Record<string, unknown>
-    throw new Error(`Failed to search Drive: ${JSON.stringify(err)}`)
+  if (res.ok) {
+    const f = await res.json() as { id: string; name: string }
+    setSpreadsheet(f.id, f.name)   // keep the display name fresh
+    return 'ready'
   }
+  return 'setup'
+}
 
-  const list = await listRes.json() as { files: { id: string; name: string }[] }
-  if (list.files.length > 0) {
-    setSpreadsheet(list.files[0].id, list.files[0].name)
-    return { isNew: false }
-  }
+/** Creates a fresh db_tasks spreadsheet (drive.file grants access to files the app creates). */
+export async function createSpreadsheet(): Promise<void> {
+  const { setSpreadsheet, accessToken } = useAuthStore.getState()
+  if (!accessToken) throw new Error('Cannot create spreadsheet: not authenticated')
 
-  // Not found — create a new spreadsheet
   const res = await fetch(SHEETS_BASE, {
     method: 'POST',
     headers: {
@@ -62,5 +59,4 @@ export async function ensureSpreadsheet(): Promise<{ isNew: boolean }> {
 
   const data = await res.json() as { spreadsheetId: string }
   setSpreadsheet(data.spreadsheetId, SPREADSHEET_TITLE)
-  return { isNew: true }
 }

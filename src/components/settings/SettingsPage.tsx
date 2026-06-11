@@ -16,7 +16,7 @@ import { useCalendarStore } from '@/store/calendarStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useLabelsStore } from '@/store/labelsStore'
 import { useTasksStore } from '@/store/tasksStore'
-import { listUserSheets } from '@/api/driveApi'
+import { openSpreadsheetPicker } from '@/services/picker'
 import { listCalendars } from '@/api/calendarApi'
 import { initialLoad, pullCalendar } from '@/services/syncService'
 import { invalidateRowCache } from '@/api/sheetsClient'
@@ -124,9 +124,6 @@ export function SettingsPage() {
   const { moveTasksToFolder, stripLabelFromTasks } = useTasksStore()
 
   // ── Spreadsheet picker state ─────────────────────────────────────────────
-  const [pickerOpen, setPickerOpen]       = useState(false)
-  const [pickerFiles, setPickerFiles]     = useState<{ id: string; name: string }[]>([])
-  const [pickerLoading, setPickerLoading] = useState(false)
   const [switching, setSwitching]         = useState(false)
 
   // ── Calendar section state ───────────────────────────────────────────────
@@ -150,25 +147,13 @@ export function SettingsPage() {
 
   // ── Spreadsheet handlers ─────────────────────────────────────────────────
 
+  // Native Google Picker: picking a file also grants the app access to it
+  // (we only have the drive.file scope — the rest of Drive is invisible).
   async function handleOpenPicker() {
-    if (pickerOpen) { setPickerOpen(false); return }
-    setPickerOpen(true)
-    setPickerLoading(true)
-    try {
-      const files = await listUserSheets()
-      setPickerFiles(files)
-    } catch {
-      setPickerOpen(false)
-    } finally {
-      setPickerLoading(false)
-    }
-  }
-
-  async function handlePickFile(file: { id: string; name: string }) {
-    setPickerOpen(false)
-    if (file.id === spreadsheetId) return
     setSwitching(true)
     try {
+      const file = await openSpreadsheetPicker()
+      if (!file || file.id === spreadsheetId) return
       setSpreadsheet(file.id, file.name)
       await Promise.all([
         db.tasks.clear(),
@@ -256,48 +241,12 @@ export function SettingsPage() {
                 className="flex-shrink-0 text-xs h-7 px-3"
                 onClick={() => void handleOpenPicker()}
                 disabled={switching}
-                aria-expanded={pickerOpen}
               >
                 {switching ? (
                   <><Loader2 size={12} className="animate-spin mr-1" />Switching…</>
-                ) : pickerOpen ? 'Cancel' : 'Change'}
+                ) : 'Change'}
               </Button>
             </div>
-
-            {pickerOpen && (
-              <div className="border-t border-border">
-                {pickerLoading ? (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-                    <Loader2 size={14} className="animate-spin" />
-                    Loading your sheets…
-                  </div>
-                ) : pickerFiles.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-muted-foreground">
-                    No Google Sheets found in your Drive.
-                  </p>
-                ) : (
-                  <ul className="max-h-60 overflow-y-auto">
-                    {pickerFiles.map((file) => (
-                      <li key={file.id}>
-                        <button
-                          className={cn(
-                            'w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left',
-                            'hover:bg-muted/60 transition-colors',
-                            file.id === spreadsheetId && 'bg-muted/40',
-                          )}
-                          onClick={() => void handlePickFile(file)}
-                        >
-                          <span className="flex-1 truncate">{file.name}</span>
-                          {file.id === spreadsheetId && (
-                            <Check size={14} className="text-primary flex-shrink-0" />
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
           </div>
 
           {/* ── 2. Priorities ───────────────────────────────────────────────── */}
