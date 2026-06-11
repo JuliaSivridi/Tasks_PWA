@@ -1,4 +1,4 @@
-import { Menu, LogOut, Settings, ChevronLeft, HelpCircle, MessageSquare } from 'lucide-react'
+import { Menu, LogOut, Settings, ChevronLeft, HelpCircle, MessageSquare, Cloud, CloudOff, CloudAlert, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -8,7 +8,8 @@ import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { flush, clearLocalData } from '@/services/syncService'
+import { useSyncStore } from '@/store/syncStore'
+import { flush, clearLocalData, fullSync } from '@/services/syncService'
 
 export function Header() {
   const { user, logout } = useAuthStore()
@@ -27,6 +28,7 @@ export function Header() {
   } = useUIStore()
   const { folders } = useFoldersStore()
   const { calendars } = useCalendarStore()
+  const { isOnline, isSyncing, pendingCount, syncError } = useSyncStore()
 
   const viewTitle = selectedView === 'upcoming' ? 'Upcoming'
     : selectedView === 'all' ? 'All tasks'
@@ -71,6 +73,42 @@ export function Header() {
       </span>
 
       <div className="ml-auto flex items-center gap-1">
+        {/* Persistent cloud indicator (mirrors the Android client): cloud with a
+            pending-count badge, spinning arrow while a sync is in flight. */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => void fullSync()}
+                className={`relative flex items-center justify-center w-9 h-9 ${
+                  !isOnline ? 'text-amber-500 dark:text-amber-400'
+                  : syncError ? 'text-destructive'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+                aria-label="Sync status"
+              >
+                {isSyncing
+                  ? <RefreshCw size={17} className="animate-spin" />
+                  : !isOnline ? <CloudOff size={18} />
+                  : syncError ? <CloudAlert size={18} />
+                  : <Cloud size={18} />}
+                {pendingCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-0.5 rounded-full bg-primary text-primary-foreground text-[10px] leading-[15px] text-center font-medium">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!isOnline ? `Offline${pendingCount > 0 ? ` · ${pendingCount} pending` : ''}`
+                : syncError ? 'Sync error — tap to retry'
+                : isSyncing ? 'Syncing…'
+                : pendingCount > 0 ? `${pendingCount} changes pending — tap to sync`
+                : 'Synced — tap to refresh'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* User avatar dropdown */}
         {user && (
           <TooltipProvider>
