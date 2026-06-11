@@ -15,7 +15,7 @@ import { seedOnboarding } from '@/api/seedOnboarding'
 import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
-  const { sidebarOpen, setSidebarOpen, settingsOpen, helpOpen, feedbackOpen, filterPanelOpen } = useUIStore()
+  const { sidebarOpen, setSidebarOpen, settingsOpen, helpOpen, feedbackOpen, filterPanelOpen, setFilterPanelOpen } = useUIStore()
   useSync()
 
   useEffect(() => {
@@ -32,8 +32,11 @@ export function AppShell() {
     <div className="flex flex-col h-dvh bg-background">
       <Header />
 
-      {/* Filter panel — slides under the header on task views */}
-      {filterPanelOpen && !settingsOpen && !helpOpen && !feedbackOpen && <TaskFilterPanel />}
+      {/* Filter panel — bottom sheet (same pattern as Money) */}
+      <TaskFilterPanel
+        open={filterPanelOpen && !settingsOpen && !helpOpen && !feedbackOpen}
+        onClose={() => setFilterPanelOpen(false)}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {!settingsOpen && !helpOpen && !feedbackOpen && (
