@@ -9,7 +9,7 @@ import { HelpPage } from '@/components/help/HelpPage'
 import { FeedbackPage } from '@/components/feedback/FeedbackPage'
 import { useUIStore } from '@/store/uiStore'
 import { useSync } from '@/hooks/useSync'
-import { initialLoad } from '@/services/syncService'
+import { initialLoad, loadFromCache } from '@/services/syncService'
 import { ensureSpreadsheet } from '@/api/spreadsheetSetup'
 import { seedOnboarding } from '@/api/seedOnboarding'
 import { usePrefsStore } from '@/store/prefsStore'
@@ -20,6 +20,7 @@ export function AppShell() {
 
   useEffect(() => {
     const setup = async () => {
+      await loadFromCache()   // instant UI from Dexie before any network work
       const { isNew } = await ensureSpreadsheet()
       if (isNew) await seedOnboarding()
       await initialLoad()

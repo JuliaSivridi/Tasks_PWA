@@ -156,18 +156,20 @@ export async function pull(): Promise<void> {
   useSyncStore.getState().setLastSyncAt(now())
 }
 
-export async function initialLoad(): Promise<void> {
-  const sync = useSyncStore.getState()
-
-  // Cache-first: show Dexie data instantly, then refresh from Sheets in the
-  // background — no empty screen while the initial pull runs.
+/** Cache-first: show Dexie data instantly. Must be the very first thing the
+ *  app does on startup — before the Drive lookup and the Sheets pull — so
+ *  the user never stares at an empty screen. */
+export async function loadFromCache(): Promise<void> {
   await Promise.all([
     useTasksStore.getState().loadFromDb(),
     useFoldersStore.getState().loadFromDb(),
     useLabelsStore.getState().loadFromDb(),
     useCalendarStore.getState().loadFromDb(),
   ])
+}
 
+export async function initialLoad(): Promise<void> {
+  const sync = useSyncStore.getState()
   sync.setSyncing(true)
   sync.setSyncError(null)
   try {
