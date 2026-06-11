@@ -1,4 +1,4 @@
-import { Menu, LogOut, Settings, ChevronLeft, HelpCircle, MessageSquare, Cloud, CloudOff, CloudAlert, RefreshCw } from 'lucide-react'
+import { Menu, LogOut, Settings, ChevronLeft, HelpCircle, MessageSquare, Cloud, CloudOff, CloudAlert, RefreshCw, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -25,6 +25,7 @@ export function Header() {
     settingsOpen, setSettingsOpen,
     helpOpen, setHelpOpen,
     feedbackOpen, setFeedbackOpen,
+    filterPanelOpen, setFilterPanelOpen, taskFilters,
   } = useUIStore()
   const { folders } = useFoldersStore()
   const { calendars } = useCalendarStore()
@@ -73,6 +74,28 @@ export function Header() {
       </span>
 
       <div className="ml-auto flex items-center gap-1">
+        {/* Filter toggle — opens the Money-style filter panel */}
+        {!overlayOpen && (() => {
+          const filtersActive =
+            taskFilters.priorities.length > 0 || taskFilters.labels.length > 0 ||
+            taskFilters.folders.length > 0 || taskFilters.calendars.length > 0
+          return (
+            <button
+              onClick={() => setFilterPanelOpen(!filterPanelOpen)}
+              className={`flex items-center justify-center w-9 h-9 rounded-lg border transition-colors ${
+                filtersActive
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : filterPanelOpen
+                    ? 'border-border text-foreground bg-accent'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="Filters"
+            >
+              <SlidersHorizontal size={16} />
+            </button>
+          )
+        })()}
+
         {/* Persistent cloud indicator (mirrors the Android client): cloud with a
             pending-count badge, spinning arrow while a sync is in flight. */}
         <TooltipProvider>

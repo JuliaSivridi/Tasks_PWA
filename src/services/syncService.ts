@@ -158,6 +158,16 @@ export async function pull(): Promise<void> {
 
 export async function initialLoad(): Promise<void> {
   const sync = useSyncStore.getState()
+
+  // Cache-first: show Dexie data instantly, then refresh from Sheets in the
+  // background — no empty screen while the initial pull runs.
+  await Promise.all([
+    useTasksStore.getState().loadFromDb(),
+    useFoldersStore.getState().loadFromDb(),
+    useLabelsStore.getState().loadFromDb(),
+    useCalendarStore.getState().loadFromDb(),
+  ])
+
   sync.setSyncing(true)
   sync.setSyncError(null)
   try {

@@ -3,6 +3,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { TaskList } from '@/components/tasks/TaskList'
+import { TaskFilterPanel } from '@/components/tasks/TaskFilterPanel'
 import { SettingsPage } from '@/components/settings/SettingsPage'
 import { HelpPage } from '@/components/help/HelpPage'
 import { FeedbackPage } from '@/components/feedback/FeedbackPage'
@@ -14,7 +15,7 @@ import { seedOnboarding } from '@/api/seedOnboarding'
 import { usePrefsStore } from '@/store/prefsStore'
 
 export function AppShell() {
-  const { sidebarOpen, setSidebarOpen, settingsOpen, helpOpen, feedbackOpen } = useUIStore()
+  const { sidebarOpen, setSidebarOpen, settingsOpen, helpOpen, feedbackOpen, filterPanelOpen } = useUIStore()
   useSync()
 
   useEffect(() => {
@@ -30,6 +31,9 @@ export function AppShell() {
   return (
     <div className="flex flex-col h-dvh bg-background">
       <Header />
+
+      {/* Filter panel — slides under the header on task views */}
+      {filterPanelOpen && !settingsOpen && !helpOpen && !feedbackOpen && <TaskFilterPanel />}
 
       <div className="flex flex-1 overflow-hidden">
         {!settingsOpen && !helpOpen && !feedbackOpen && (

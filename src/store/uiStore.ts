@@ -2,6 +2,15 @@ import { create } from 'zustand'
 
 export type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed' | 'calendar'
 
+export interface TaskFilters {
+  priorities: string[]
+  labels: string[]
+  folders: string[]
+  calendars: string[]
+}
+
+const EMPTY_FILTERS: TaskFilters = { priorities: [], labels: [], folders: [], calendars: [] }
+
 interface UIState {
   selectedView: SelectedView
   selectedFolderId: string | null
@@ -11,6 +20,11 @@ interface UIState {
   settingsOpen: boolean
   helpOpen: boolean
   feedbackOpen: boolean
+  filterPanelOpen: boolean
+  taskFilters: TaskFilters
+  setFilterPanelOpen: (v: boolean) => void
+  toggleFilter: (kind: keyof TaskFilters, id: string) => void
+  clearFilters: () => void
   setView: (view: Exclude<SelectedView, 'calendar'>, id?: string) => void
   setCalendarView: (calendarId: string) => void
   setSidebarOpen: (v: boolean) => void
@@ -29,6 +43,22 @@ export const useUIStore = create<UIState>((set) => ({
   settingsOpen: false,
   helpOpen: false,
   feedbackOpen: false,
+  filterPanelOpen: false,
+  taskFilters: { ...EMPTY_FILTERS },
+
+  setFilterPanelOpen: (v) => set({ filterPanelOpen: v }),
+
+  toggleFilter: (kind, id) => set((s) => {
+    const arr = s.taskFilters[kind]
+    return {
+      taskFilters: {
+        ...s.taskFilters,
+        [kind]: arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id],
+      },
+    }
+  }),
+
+  clearFilters: () => set({ taskFilters: { ...EMPTY_FILTERS } }),
 
   setView: (view, id) => set({
     selectedView: view,

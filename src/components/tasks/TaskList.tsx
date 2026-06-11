@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Plus, FolderOpen, Trash2, RotateCcw, Flag, Tag, ChevronLeft, ChevronRight, Calendar, Folder, CalendarDays, X } from 'lucide-react'
+import { Plus, FolderOpen, Trash2, RotateCcw, Tag, ChevronLeft, ChevronRight, Calendar, Folder, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -68,154 +65,9 @@ function SortableTaskRow({ task, showFolder }: { task: Task; showFolder: boolean
   )
 }
 
-// ── Priority options (shared) ─────────────────────────────────────────────────
-
-const PRIORITY_OPTS = [
-  { id: 'urgent',    color: '#f87171', title: 'Urgent' },
-  { id: 'important', color: '#fb923c', title: 'Important' },
-  { id: 'normal',    color: '#9ca3af', title: 'Normal' },
-] as const
-
-// ── Filter bar: priority / label / folder / calendar dropdown multi-select ────
-
-interface FilterBarProps {
-  priorityFilter: string[]
-  setPriorityFilter: (v: string[]) => void
-  labelFilter: string[]
-  setLabelFilter: (v: string[]) => void
-  folderFilter: string[]
-  setFolderFilter: (v: string[]) => void
-  calendarFilter: string[]
-  setCalendarFilter: (v: string[]) => void
-  onClearAll: () => void
-}
-
-function FilterBar({
-  priorityFilter, setPriorityFilter,
-  labelFilter, setLabelFilter,
-  folderFilter, setFolderFilter,
-  calendarFilter, setCalendarFilter,
-  onClearAll,
-}: FilterBarProps) {
-  const { labels } = useLabelsStore()
-  const { folders } = useFoldersStore()
-  const { calendars } = useCalendarStore()
-  const { enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled } = usePrefsStore()
-  const enabledCalendars = calendars.filter(c => enabledCalendarIds.includes(c.id))
-
-  const toggle = <T extends string>(arr: T[], id: T, set: (v: T[]) => void) =>
-    set(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id])
-
-  const anyActive =
-    (prioritiesEnabled && priorityFilter.length > 0) ||
-    (labelsEnabled && labelFilter.length > 0) ||
-    (foldersEnabled && folderFilter.length > 0) ||
-    calendarFilter.length > 0
-
-  return (
-    <div className="flex items-center gap-1 px-3 py-1.5 border-b">
-      {/* Clear all filters button — shown when any filter is active */}
-      {anyActive && (
-        <button
-          onClick={onClearAll}
-          className="p-1.5 rounded transition-colors hover:bg-accent text-muted-foreground hover:text-foreground"
-          title="Clear all filters"
-        >
-          <X size={14} />
-        </button>
-      )}
-
-      {/* Priority */}
-      {prioritiesEnabled && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', priorityFilter.length > 0 && 'bg-accent')}>
-              <Flag size={14} className={priorityFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[140px]">
-            {PRIORITY_OPTS.map(p => (
-              <DropdownMenuItem key={p.id} onSelect={(e) => { e.preventDefault(); toggle(priorityFilter, p.id, setPriorityFilter) }}>
-                <Flag size={14} className="mr-2" style={{ color: p.color }} />
-                {p.title}
-                {priorityFilter.includes(p.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {/* Label */}
-      {labelsEnabled && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn('p-1.5 rounded transition-colors hover:bg-accent', labelFilter.length > 0 && 'bg-accent')}
-              disabled={labels.length === 0}
-            >
-              <Tag size={14} className={labelFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[140px]">
-            {labels.map(l => (
-              <DropdownMenuItem key={l.id} onSelect={(e) => { e.preventDefault(); toggle(labelFilter, l.id, setLabelFilter) }}>
-                <Tag size={14} className="mr-2" style={{ color: l.color }} />
-                <span style={{ color: l.color }}>{l.name}</span>
-                {labelFilter.includes(l.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {/* Folder */}
-      {foldersEnabled && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn('p-1.5 rounded transition-colors hover:bg-accent', folderFilter.length > 0 && 'bg-accent')}
-              disabled={folders.length === 0}
-            >
-              <Folder size={14} className={folderFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[140px]">
-            {folders.map(f => (
-              <DropdownMenuItem key={f.id} onSelect={(e) => { e.preventDefault(); toggle(folderFilter, f.id, setFolderFilter) }}>
-                <Folder size={14} className="mr-2" style={{ color: f.color }} />
-                {f.name}
-                {folderFilter.includes(f.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {/* Calendar chip — only enabled calendars */}
-      {enabledCalendars.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn('p-1.5 rounded transition-colors hover:bg-accent', calendarFilter.length > 0 && 'bg-accent')}>
-              <CalendarDays size={14} className={calendarFilter.length > 0 ? 'text-foreground' : 'text-muted-foreground'} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[160px]">
-            {enabledCalendars.map(cal => (
-              <DropdownMenuItem
-                key={cal.id}
-                onSelect={(e) => { e.preventDefault(); toggle(calendarFilter, cal.id, setCalendarFilter) }}
-              >
-                <CalendarDays size={14} className="mr-2 flex-shrink-0" style={{ color: cal.color }} />
-                <span className="flex-1 truncate">{cal.summary}</span>
-                {calendarFilter.includes(cal.id) && <span className="ml-auto pl-2 text-primary">✓</span>}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
-  )
-}
+// Priority options moved to ./priorityOpts (shared with TaskFilterPanel);
+// the old per-view FilterBar was replaced by the global TaskFilterPanel
+// toggled from the header (filters now live in uiStore.taskFilters).
 
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
@@ -356,14 +208,11 @@ function WeekStrip({
 
 function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const groups = useUpcomingGroupsWithEvents()
-  const { setCreateTaskOpen } = useUIStore()
+  const { setCreateTaskOpen, taskFilters } = useUIStore()
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
   const calendars = useCalendarStore(s => s.calendars)
 
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
-  const [labelFilter, setLabelFilter] = useState<string[]>([])
-  const [folderFilter, setFolderFilter] = useState<string[]>([])
-  const [calendarFilter, setCalendarFilter] = useState<string[]>([])
+  const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter, calendars: calendarFilter } = taskFilters
   const [weekOffset, setWeekOffset] = useState(0)
   const [activeDate, setActiveDate] = useState<string | null>(() => format(new Date(), 'yyyy-MM-dd'))
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -474,16 +323,6 @@ function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
         datesWithContent={datesWithContent}
         onDayClick={handleDayClick} onPrev={handlePrev}
         onNext={handleNext} onToday={handleTodayClick}
-      />
-      <FilterBar
-        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
-        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
-        calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
-        onClearAll={() => {
-          setPriorityFilter([]); setLabelFilter([])
-          setFolderFilter([]); setCalendarFilter([])
-        }}
       />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
@@ -597,13 +436,10 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
   const allEvents = useCalendarStore(s => s.events)
   const calendars = useCalendarStore(s => s.calendars)
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
-  const { setCreateTaskOpen } = useUIStore()
+  const { setCreateTaskOpen, taskFilters } = useUIStore()
   const { handleDelete, handleDeleteSeries } = useEventHandlers()
 
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
-  const [labelFilter, setLabelFilter] = useState<string[]>([])
-  const [folderFilter, setFolderFilter] = useState<string[]>([])
-  const [calendarFilter, setCalendarFilter] = useState<string[]>([])
+  const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter, calendars: calendarFilter } = taskFilters
 
   const { showTasks, showEvents, calActive } = filterMatrix(priorityFilter, labelFilter, folderFilter, calendarFilter)
 
@@ -675,16 +511,6 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
 
   return (
     <div className="flex flex-col h-full">
-      <FilterBar
-        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
-        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
-        calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
-        onClearAll={() => {
-          setPriorityFilter([]); setLabelFilter([])
-          setFolderFilter([]); setCalendarFilter([])
-        }}
-      />
       {merged.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
           <FolderOpen size={40} className="opacity-20" />
@@ -723,25 +549,13 @@ function CompletedView() {
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
   const { updateTask, deleteTask } = useTasksStore()
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([])
-  const [labelFilter, setLabelFilter] = useState<string[]>([])
-  const [folderFilter, setFolderFilter] = useState<string[]>([])
-  const [calendarFilter, setCalendarFilter] = useState<string[]>([])
+  const { taskFilters } = useUIStore()
+  const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter } = taskFilters
 
   const filtered = applyFilters(tasks, priorityFilter, labelFilter, folderFilter)
 
   return (
     <div className="flex flex-col h-full">
-      <FilterBar
-        priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter}
-        labelFilter={labelFilter} setLabelFilter={setLabelFilter}
-        folderFilter={folderFilter} setFolderFilter={setFolderFilter}
-        calendarFilter={calendarFilter} setCalendarFilter={setCalendarFilter}
-        onClearAll={() => {
-          setPriorityFilter([]); setLabelFilter([])
-          setFolderFilter([]); setCalendarFilter([])
-        }}
-      />
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
           <FolderOpen size={40} className="opacity-20" />
