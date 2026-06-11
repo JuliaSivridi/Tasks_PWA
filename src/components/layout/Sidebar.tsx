@@ -1,17 +1,14 @@
 import {
   CalendarClock, CheckCircle2, LayoutList, Inbox,
-  Folder, RefreshCw, ChevronDown, ChevronRight,
+  Folder, ChevronDown, ChevronRight,
   CalendarDays,
 } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useFoldersStore } from '@/store/foldersStore'
-import { useSyncStore } from '@/store/syncStore'
 import { usePrefsStore } from '@/store/prefsStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { cn } from '@/lib/utils'
 import { INBOX_FOLDER_ID } from '@/utils/constants'
-import { format } from 'date-fns'
-import { fullSync } from '@/services/syncService'
 
 // ─── Section header with collapse toggle ──────────────────────────────────────
 
@@ -43,7 +40,6 @@ export function Sidebar() {
   const goToCalendar = (id: string) => { setCalendarView(id); setSidebarOpen(false) }
 
   const { folders } = useFoldersStore()
-  const { lastSyncAt, isSyncing } = useSyncStore()
   const { sectionOpen, calendarEnabled, enabledCalendarIds, foldersEnabled } = usePrefsStore()
   const { calendars } = useCalendarStore()
   const enabledCalendars = calendars.filter(c => enabledCalendarIds.includes(c.id))
@@ -148,20 +144,6 @@ export function Sidebar() {
 
       </div>
 
-      {/* Footer: sync status + button */}
-      <div className="px-3 py-2 border-t flex items-center gap-2">
-        <button
-          onClick={() => void fullSync()}
-          disabled={isSyncing}
-          className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          title="Sync"
-        >
-          <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
-        </button>
-        <span className="text-sm text-muted-foreground">
-          {isSyncing ? 'Syncing...' : lastSyncAt ? `Synced ${format(new Date(lastSyncAt), 'HH:mm')}` : 'Not synced'}
-        </span>
-      </div>
     </div>
   )
 }
