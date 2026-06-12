@@ -1,6 +1,6 @@
 # Tasks PWA — Technical Specification
 
-> Version 0.0.0 · Branch: main · Generated: 2026-06-09
+> Version 0.0.0 · Branch: main · Generated: 2026-06-12
 
 ---
 
@@ -34,7 +34,8 @@ Tasks PWA is a personal task manager that stores all data in the user's own Goog
 - **Google Sheets as the database.** There is no proprietary backend. All task, folder, and label data lives in a single `db_tasks` spreadsheet in the user's own Google Drive. Users can read and edit the spreadsheet directly.
 - **Offline-first.** Every mutation writes to Dexie first, then enqueues a Sheets operation. The UI reads only from in-memory Zustand state seeded from Dexie. There is no blocking network call on any user action.
 - **Last-write-wins conflict resolution.** When pulling from Sheets, `updated_at` timestamps are compared per entity; the newer record wins.
-- **Calendar integration is opt-in.** Google Calendar events are fetched separately via the Calendar API and merged into task views. This feature requires additional OAuth scope (`https://www.googleapis.com/auth/calendar`) and is enabled per user in Settings.
+- **`drive.file` scope only.** The app requests `drive.file` instead of the full Drive or Sheets scope. This means it can only access files it created itself or that the user explicitly picked via the Google Picker — the rest of the user's Drive is invisible. There is no silent Drive search; on first run the user must create a new spreadsheet or pick an existing one.
+- **Calendar integration is opt-in.** Google Calendar events are fetched separately via the Calendar API and merged into task views. Two narrower scopes are requested: `calendar.readonly` (list calendars + read events) and `calendar.events` (create/edit/delete events). Enabled per user in Settings.
 - **No router.** Views are switched by a Zustand `uiStore` (`SelectedView` union type). The URL never changes.
 - **Token persistence in localStorage.** The GIS OAuth2 token is stored in `localStorage` (key `tasks-pwa-auth`) to avoid prompting on every page load. This is an acknowledged XSS trade-off noted in the code.
 
@@ -90,7 +91,7 @@ Browser
   └── Google APIs (online only)
         ├── Sheets API v4   — tasks / folders / labels CRUD
         ├── Calendar API v3 — events read + write
-        └── Drive API v3    — spreadsheet search
+        └── Drive API v3    — Google Picker (user-selected file access)
 ```
 
 ### Data-flow diagram
@@ -131,12 +132,16 @@ Pull (on load / online / every 5 min visibility):
 
 ### Read path
 
-1. On app start (`AppShell` mount): `ensureSpreadsheet()` → (if new) `seedOnboarding()` → `initialLoad()`.
-2. `initialLoad()`: calls `ensureHeader()` on all sheets, then `flush()`, then `pull()`, then `pullCalendar()`.
-3. `pull()`: fetches all tasks, folders, labels in parallel from Sheets; calls `upsertMany()` on each store.
-4. `upsertMany()` (tasks): conflict resolution — for each incoming entity, compare `updated_at` with the local Dexie record; keep the newer. Then `db.tasks.bulkPut(toStore)`.
-5. After `initialLoad()`: `usePrefsStore.load()` — reads `settings!A1` JSON from Sheets.
-6. `useSync` hook: registers `window.addEventListener('online')` → `fullSync()`, `visibilitychange` → `fullSync()` if stale > 5 min, `pagehide` → `flush()`.
+1. On app start (`AppShell` mount): `loadFromCache()` runs first — loads tasks, folders, labels, calendar events from Dexie into Zustand instantly (no network call, user sees data immediately).
+2. `checkSpreadsheet()` checks whether the stored `spreadsheetId` is accessible via `GET /drive/v3/files/{id}`:
+   - `'ready'` → proceed to `initialLoad()`.
+   - `'setup'` (no ID stored, or Drive returned an error) → `AppShell` renders `SetupScreen`.
+3. `SetupScreen`: user chooses **"Choose from Google Drive"** (opens Google Picker → `openSpreadsheetPicker()`) or **"Create new spreadsheet"** (calls `createSpreadsheet()` → `seedOnboarding()`). After either path, `initialLoad()` runs.
+4. `initialLoad()`: calls `ensureHeader()` on all sheets, then `flush()`, then `pull()`, then `pullCalendar()`.
+5. `pull()`: invalidates the row cache first, then fetches all tasks, folders, labels in parallel. Builds `pendingIds` from the queue; entities with pending local changes are not overwritten. Prunes entities deleted on other devices (present in Dexie but absent from the incoming Sheets data, and not in `pendingIds`).
+6. `upsertMany()` (tasks): conflict resolution — for each incoming task, compare `updated_at` with the local Dexie record; keep the newer.
+7. After `initialLoad()`: `usePrefsStore.load()` — reads `settings!A1` JSON from Sheets.
+8. `useSync` hook: registers `window.addEventListener('online')` → `fullSync()`, `visibilitychange` → `fullSync()` if stale > 5 min, `pagehide` → `flush()`.
 
 ### Error handling
 
@@ -162,7 +167,6 @@ Tasks-PWA/
 │   └── icons/                  PWA icons (192, 512px)
 ├── docs/
 │   ├── tech-spec.md            This file
-│   ├── tech-spec.html          HTML version
 │   └── tech-spec-example.css  CSS used by HTML spec
 └── src/
     ├── main.tsx                React root mount
@@ -186,19 +190,19 @@ Tasks-PWA/
     ├── services/
     │   ├── db.ts               Dexie schema (TaskManagerDB, versions 1+2)
     │   ├── authService.ts      initAuth(), GIS script loader
-    │   ├── syncService.ts      flush(), pull(), pullCalendar(), initialLoad(), fullSync(), scheduleFlush(), clearLocalData()
+    │   ├── syncService.ts      flush(), pull(), pullCalendar(), loadFromCache(), initialLoad(), fullSync(), scheduleFlush(), clearLocalData()
+    │   ├── picker.ts           openSpreadsheetPicker() — Google Picker (drive.file scope)
     │   ├── offlineQueue.ts     enqueue(), getPending(), markDone(), markFailed(), etc.
     │   └── recurrenceService.ts getNextDueDate(), createNextOccurrence()
     ├── api/
     │   ├── sheetsClient.ts     sheetsRequest(), findRowIndex(), invalidateRowCache()
-    │   ├── spreadsheetSetup.ts ensureSpreadsheet() — Drive search / create
+    │   ├── spreadsheetSetup.ts checkSpreadsheet() — verify access; createSpreadsheet() — new file
     │   ├── seedOnboarding.ts   seedOnboarding() — writes initial data to new spreadsheet
     │   ├── tasksApi.ts         fetchAllTasks(), appendTask(), updateTask(), ensureHeader()
-    │   ├── foldersApi.ts       fetchAllFolders(), appendFolder(), updateFolder(), ensureFolderHeader()
-    │   ├── labelsApi.ts        fetchAllLabels(), appendLabel(), updateLabel(), ensureLabelHeader()
+    │   ├── foldersApi.ts       fetchAllFolders(), appendFolder(), updateFolder(), clearFolderRow(), ensureFolderHeader()
+    │   ├── labelsApi.ts        fetchAllLabels(), appendLabel(), updateLabel(), clearLabelRow(), ensureLabelHeader()
     │   ├── settingsApi.ts      loadSettings(), saveSettings() — settings!A1 JSON blob
-    │   ├── calendarApi.ts      listCalendars(), listEvents(), getEvent(), createEvent(), updateEvent(), deleteEvent()
-    │   └── driveApi.ts         listUserSheets()
+    │   └── calendarApi.ts      listCalendars(), listEvents(), getEvent(), createEvent(), updateEvent(), deleteEvent()
     ├── store/
     │   ├── authStore.ts        user, accessToken, tokenExpiry, spreadsheetId; persist to localStorage
     │   ├── tasksStore.ts       tasks[], addTask, updateTask, completeTask, deleteTask, upsertMany
@@ -207,23 +211,25 @@ Tasks-PWA/
     │   ├── calendarStore.ts    events[], calendars[], setEvents, upsertEvent, removeEvent
     │   ├── prefsStore.ts       sectionOpen, calendarEnabled, enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled; saves to settings sheet
     │   ├── syncStore.ts        isSyncing, isOnline, lastSyncAt, pendingCount, syncError
-    │   └── uiStore.ts          selectedView, selectedFolderId, selectedCalendarId
+    │   └── uiStore.ts          selectedView, selectedFolderId, selectedCalendarId, filterPanelOpen, taskFilters
     ├── hooks/
     │   ├── useSync.ts          online/offline/visibilitychange/pagehide event handlers
     │   └── useTasks.ts         useUpcomingGroups, useUpcomingGroupsWithEvents, useAllTasks,
     │                           useCalendarEvents, useCompletedTasks, useFilteredRootTasks
     └── components/
         ├── layout/
-        │   ├── AppShell.tsx    Top-level shell: Header + Sidebar + main content
+        │   ├── AppShell.tsx    Top-level shell: Header + Sidebar + main content; SetupScreen on first run
         │   ├── LoginPage.tsx   Google sign-in page
-        │   ├── Header.tsx      App bar with title, hamburger, user avatar dropdown
-        │   └── Sidebar.tsx     Navigation, folders (when foldersEnabled), calendars, sync status
+        │   ├── Header.tsx      App bar with title, hamburger, cloud sync indicator, filter button, user avatar dropdown
+        │   └── Sidebar.tsx     Navigation, folders (when foldersEnabled), calendars
         ├── tasks/
         │   ├── TaskList.tsx    View router + all view implementations
+        │   ├── TaskFilterPanel.tsx Bottom-sheet filter panel (priority / label / folder / calendar)
         │   ├── TaskItem.tsx    Single task row with inline actions
         │   ├── TaskChildren.tsx DnD sortable child list
         │   ├── TaskCreateModal.tsx Create/edit task or calendar event dialog
-        │   └── TimePickerDialog.tsx Deadline + repeat picker dialog
+        │   ├── TimePickerDialog.tsx Deadline + repeat picker dialog
+        │   └── priorityOpts.ts Shared PRIORITY_OPTS constant (id, color, title)
         ├── calendar/
         │   ├── CalendarEventItem.tsx Event row (mirrors TaskItem layout)
         │   └── EventScheduleDialog.tsx Edit event schedule/recurrence dialog
@@ -438,7 +444,7 @@ Database name: **`TaskManagerDB`**
 2. `initAuth()` dynamically injects the GIS script (`https://accounts.google.com/gsi/client`) if not already present.
 3. `google.accounts.oauth2.initTokenClient` is called with:
    - `client_id: VITE_GOOGLE_CLIENT_ID`
-   - `scope: email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/calendar`
+   - `scope: email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events`
    - `login_hint`: user's email from `authStore` (if known), for silent refresh
    - `callback`: stores the token via `resolveTokenRequest(token, expiresIn)`; fetches user profile from `https://www.googleapis.com/oauth2/v3/userinfo`
 4. `authStore` is checked: if `accessToken` is present and not expired (> 60 s remaining), it is used as-is (restored from `localStorage`).
@@ -449,19 +455,23 @@ Database name: **`TaskManagerDB`**
 
 ### First-launch setup (AppShell mount)
 
-1. `ensureSpreadsheet()` is called:
-   a. If `spreadsheetId` is already in `authStore` (localStorage): return `{ isNew: false }`.
-   b. Otherwise: search Google Drive for `name='db_tasks' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`.
-   c. If found: call `setSpreadsheet(id, name)` → return `{ isNew: false }`.
-   d. If not found: create a new spreadsheet with title `db_tasks` and four sheets: `tasks`, `folders`, `labels`, `settings`. Return `{ isNew: true }`.
-2. If `isNew === true`: call `seedOnboarding()`.
-3. `initialLoad()`:
+1. `loadFromCache()` runs immediately — hydrates Zustand from Dexie so the user sees their last-known data before any network call.
+2. `checkSpreadsheet()` is called:
+   - If no `spreadsheetId` in `authStore`: return `'setup'`.
+   - Otherwise: `GET /drive/v3/files/{spreadsheetId}` with the current token.
+   - If the file is accessible: update the display name and return `'ready'`.
+   - If not accessible (404, 403, or the scope was just migrated from a previous install): return `'setup'`.
+3. If `'setup'`: `AppShell` renders `SetupScreen` — a full-screen overlay with two choices:
+   - **"Choose from Google Drive"** → opens `openSpreadsheetPicker()` (Google Picker); user picks a spreadsheet; `setSpreadsheet(id, name)` is called. No seed.
+   - **"Create new spreadsheet"** → `createSpreadsheet()` (POST to Sheets API, creates `db_tasks` with four blank sheets) → `seedOnboarding()`.
+   After either path, `SetupScreen` calls `initialLoad()` + `usePrefsStore.load()`.
+4. If `'ready'`: proceed directly to `initialLoad()`:
    a. `ensureHeader()` / `ensureFolderHeader()` / `ensureLabelHeader()` — ensures all sheet headers exist.
    b. `flush()` — pushes any queued offline changes.
-   c. `pull()` — fetches and upserts tasks, folders, labels.
+   c. `pull()` — fetches and upserts tasks, folders, labels (see pull path for details).
    d. `pullCalendar()` — if `calendarEnabled`, fetches events.
-4. `ensureInbox()` — guarantees the Inbox folder exists in Dexie and Zustand.
-5. `usePrefsStore.load()` — reads `settings!A1` and restores sidebar section states and calendar preferences.
+5. `ensureInbox()` — guarantees the Inbox folder exists in Dexie and Zustand.
+6. `usePrefsStore.load()` — reads `settings!A1` and restores sidebar section states and calendar preferences.
 
 ### Logout
 
@@ -475,6 +485,8 @@ This ensures that no data from one Google account leaks into a subsequent login 
 ### Token refresh in flight
 
 `sheetsClient.ts` and `calendarApi.ts` both implement automatic token refresh: if a request returns HTTP 401, one refresh attempt is made. If the refresh succeeds, the original request is retried once. A second 401 throws an error.
+
+`authStore.refreshToken()` deduplicates concurrent callers: if a refresh is already in flight, subsequent calls receive the same `Promise` instead of overwriting each other's callbacks (which would leave the first caller's promise permanently pending).
 
 ### Onboarding seed data
 
@@ -524,8 +536,10 @@ All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALS
       - `task/delete` → `updateTask` with `status: 'deleted'`
       - `folder/create` → `appendFolder`
       - `folder/update` → `updateFolder`
+      - `folder/delete` → `clearFolderRow` (blanks all cells in the row)
       - `label/create` → `appendLabel`
       - `label/update` → `updateLabel`
+      - `label/delete` → `clearLabelRow` (blanks all cells in the row)
    c. On success: `markDone(localId)` (deletes the queue row).
    d. On error: `markFailed(localId, retryCount + 1)`.
 4. `invalidateRowCache()` — clears the `entityId → sheet row` cache.
@@ -535,9 +549,13 @@ All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALS
 
 ### Pull path
 
-`pull()` fetches all tasks, folders, labels in parallel (`Promise.all`). For each entity list, `upsertMany()` is called:
+`pull()` first calls `invalidateRowCache()` (another device may have reordered rows since the cache was built), then fetches all tasks, folders, labels in parallel (`Promise.all`). It builds `pendingIds` from the queue before calling `upsertMany`. For each entity list, `upsertMany()` is called:
 - **Tasks:** for each incoming task, compare `updated_at` with local Dexie record; keep the newer. `bulkPut` all resolved records. Reload all `pending | completed` tasks from Dexie into Zustand.
-- **Folders / Labels:** `bulkPut` all incoming records (no per-field conflict check, since sheets is the authority after a pull).
+- **Folders / Labels:** entities absent from the incoming Sheets data but present in Dexie are pruned (deleted on another device) — unless their ID is in `pendingIds` (has unsent local changes). `bulkPut` surviving records.
+
+### Cache-first startup
+
+`loadFromCache()` hydrates all four stores (tasks, folders, labels, calendar events) from Dexie before any network activity. It is called as the very first step of `AppShell` setup so the user never sees an empty screen while the Drive/Sheets roundtrips are in flight.
 
 ### Calendar sync
 
@@ -568,23 +586,25 @@ All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALS
 
 ### AppShell layout
 
-`AppShell` renders:
+On first render `AppShell` checks the spreadsheet (see Section 7). If the result is `'setup'`, it renders `SetupScreen` (full-screen) instead of the normal shell.
+
+After setup completes (or if `'ready'`), `AppShell` renders:
 - `Header` (full width, height h-14)
+- `TaskFilterPanel` (bottom-sheet, rendered in the DOM always; animated in/out)
 - Desktop sidebar: `<aside class="hidden md:flex w-60">` with `Sidebar`
 - Mobile sidebar: Radix `Sheet` drawer, `side="left"`, width 60
 - Main content: `TaskList`, or `SettingsPage`, or `HelpPage`, or `FeedbackPage`
 
-When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sidebar is hidden and the page replaces `TaskList`.
+When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sidebar is hidden and the page replaces `TaskList`. The filter panel is also suppressed when any overlay is open.
 
 ---
 
 ### UpcomingView
 
 - **Data:** `useUpcomingGroupsWithEvents()` — all pending tasks with `deadline_date`, plus all calendar events; merged and grouped by day.
-- **Filters:** `priorityFilter`, `labelFilter`, `folderFilter`, `calendarFilter` (all multi-select, applied via `filterMatrix`).
+- **Filters:** `taskFilters` from `uiStore` (`priorities`, `labels`, `folders`, `calendars`), applied via `filterMatrix`. Filters are global (shared across all views via the header filter button).
 - **Sort (per group):** items with a time sort earlier than all-day/timeless items; all-day and timeless items use `'99:99'` sentinel.
-- **Layout:** `WeekStrip` (7-day navigation strip at top) + `FilterBar` + scrollable groups. Each day group has a header label. Overdue group is first, coloured red.
-- **FilterBar:** Priority button hidden when `prioritiesEnabled === false`; Label button hidden when `labelsEnabled === false`; Folder button hidden when `foldersEnabled === false`.
+- **Layout:** `WeekStrip` (7-day navigation strip at top) + scrollable groups. Each day group has a header label. Overdue group is first, coloured red.
 - **Empty state:** `FolderOpen size=40 opacity-20` + "No upcoming tasks" + "Add task" ghost button.
 - **Special features:** `IntersectionObserver` tracks the topmost visible date group and highlights it in the `WeekStrip`. Clicking a day in the strip scrolls to that date's group. Week navigation arrows move the strip; the "Today" button scrolls to today.
 - **User actions:** check task (complete/advance), open `TimePickerDialog`, open `TaskCreateModal` (edit), delete, label/priority pickers inline. For events: edit (opens `TaskCreateModal` in event mode), delete (with recurring choice dialog), edit schedule (opens `EventScheduleDialog`).
@@ -592,7 +612,7 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 ### AllTasksView
 
 - **Data:** `useAllTasks()` (all pending tasks) + calendar events (today to today+366 when `calendarEnabled`).
-- **Filters:** same `FilterBar` with `filterMatrix`.
+- **Filters:** `taskFilters` from `uiStore`, applied via `filterMatrix` (same global state as UpcomingView).
 - **Sort:** merged list sorted by priority (urgent=0, important=1, normal=2), then date+time, then tasks with no deadline last. Events are ranked as priority 2 (normal).
 - **Layout:** flat list; no grouping. Shows `showDate={true}` on `CalendarEventItem`.
 - **Empty state:** `FolderOpen size=40 opacity-20` + "No tasks" + "Add task" ghost button.
@@ -608,7 +628,7 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 ### CompletedView
 
 - **Data:** `useCompletedTasks()` — all tasks with `status === 'completed'`, sorted by `completed_at` or `updated_at` descending.
-- **Filters:** `FilterBar` (priority, label, folder).
+- **Filters:** `taskFilters` from `uiStore` (priority, label, folder; calendar filter not applicable here).
 - **Layout:** custom row: strikethrough title, completion datetime, label names, folder name. `RotateCcw` button (restore to pending) and `Trash2` button (hard delete).
 - **Empty state:** `FolderOpen size=40 opacity-20` + "No completed tasks".
 - **User actions:** restore task to pending (clears `completed_at`, sets `status: 'pending'`); permanently delete task.
@@ -630,7 +650,7 @@ When `settingsOpen`, `helpOpen`, or `feedbackOpen` is true in `uiStore`, the sid
 
 Cards are rendered in this order (no section header labels):
 
-- **Spreadsheet card:** shows current spreadsheet name/ID. "Change" opens an inline list of all Google Sheets from the user's Drive (`listUserSheets()`). Selecting a different sheet clears Dexie (tasks, folders, labels, queue), invalidates row cache, then runs `initialLoad()`.
+- **Spreadsheet card:** shows current spreadsheet name/ID. "Change" opens the native Google Picker (`openSpreadsheetPicker()`) — under `drive.file` scope, only files the app created or the user previously picked are visible. After picking, clears Dexie (tasks, folders, labels, queue), invalidates row cache, then runs `initialLoad()`.
 - **Priorities card:** toggle for `prioritiesEnabled`. Subtitle: "Mark tasks as Urgent, Important, or Normal". No list — just the toggle row.
 - **Labels card:** toggle for `labelsEnabled` + "+" button (when enabled). Animated list of all labels with colored dot, name, Edit and Delete buttons. Edit → `ItemFormModal`. Delete → `ConfirmDialog` → `stripLabelFromTasks` + `deleteLabel`.
 - **Folders card:** toggle for `foldersEnabled` + "+" button (when enabled). List shows Inbox first (read-only, no edit/delete), then other folders sorted by `sort_order`. Edit/Delete buttons per folder. Delete → `ConfirmDialog` → `moveTasksToFolder(id, INBOX)` + `deleteFolder`.
@@ -659,6 +679,16 @@ A round `+` button (`w-14 h-14`, `rounded-full`, `bg-primary`, `absolute bottom-
 | Upcoming / All Tasks / Folder / Completed | Task mode (default) |
 | Calendar (owner or writer access) | Event mode, current calendar pre-selected |
 | Calendar (reader / freeBusyReader) | Task mode (default) |
+
+### TaskFilterPanel
+
+A bottom-sheet filter panel (same pattern as Money). Rendered in `AppShell` (always in the DOM; `translate-y-full` when closed, `translate-y-0` when open). Toggled by the `SlidersHorizontal` button in the header.
+
+**State:** filters live in `uiStore.taskFilters` (`TaskFilters` interface: `priorities: string[]`, `labels: string[]`, `folders: string[]`, `calendars: string[]`). Toggling a chip calls `toggleFilter(kind, id)`. "Clear all filters" calls `clearFilters()` and closes the panel.
+
+**Sections shown:** Priority (hidden when `prioritiesEnabled === false`), Labels (hidden when `labelsEnabled === false`), Folders (hidden when `foldersEnabled === false`), Calendars (only enabled calendars; hidden if none).
+
+**Filter button in header:** shows active state (`bg-primary text-primary-foreground`) when any filter is active; otherwise shows as an icon button.
 
 ### TaskItem
 
@@ -735,6 +765,19 @@ Date chip, start/end time chips, repeat section (weekly day buttons, monthly pat
 ### ConfirmDialog
 
 **Props:** `open`, `title`, `description?`, `confirmLabel?` (default `'Delete'`), `onConfirm`, `onCancel`. Standard dialog with Cancel (outline) + Confirm (destructive) buttons.
+
+### Header cloud sync indicator
+
+A persistent icon button in the header (replaces the sidebar sync footer). Reads `isOnline`, `isSyncing`, `pendingCount`, `syncError` from `syncStore`. Clicking triggers `fullSync()`.
+
+| State | Icon | Color |
+|-------|------|-------|
+| Syncing | `RefreshCw` (animate-spin) | `text-muted-foreground` |
+| Offline | `CloudOff` | `text-amber-500` |
+| Sync error | `CloudAlert` | `text-destructive` |
+| Idle | `Cloud` | `text-muted-foreground` |
+
+When `pendingCount > 0` a small badge (`bg-primary`) with the count is overlaid on the icon (shows `99+` for counts above 99). A `Tooltip` shows a human-readable status string. The sidebar no longer has a sync footer.
 
 ### SyncStatusBanner
 
@@ -857,6 +900,19 @@ type SelectedView = 'upcoming' | 'all' | 'folder' | 'completed' | 'calendar'
 | `setView('completed')` | Shows CompletedView |
 | `setCalendarView(calendarId)` | Shows CalendarEventListView for the given calendar |
 
+### Filter state in uiStore
+
+```ts
+interface TaskFilters {
+  priorities: string[]   // priority ids: 'urgent' | 'important' | 'normal'
+  labels: string[]       // label ids
+  folders: string[]      // folder ids
+  calendars: string[]    // calendar ids
+}
+```
+
+`taskFilters` is not persisted (resets on page reload). `filterPanelOpen: boolean` controls the bottom-sheet visibility. `toggleFilter(kind, id)` adds/removes an id from the matching array. `clearFilters()` resets all arrays to empty.
+
 ### Overlay screens
 
 Overlay screens are boolean flags in `uiStore`, rendered over the main content. When any is open, the sidebar and `TaskList` are hidden; the header shows a `ChevronLeft` back button.
@@ -974,7 +1030,7 @@ npm run dev
 # → http://localhost:5173
 ```
 
-**6. First sign-in** — Click "Sign in with Google". On first run `ensureSpreadsheet()` searches Drive for `db_tasks`. If not found, a new Sheets file is created and seeded with sample data via `seedOnboarding()`. The spreadsheet ID is cached in `localStorage` (`tasks-pwa-auth`).
+**6. First sign-in** — Click "Sign in with Google". The app loads cached data from Dexie immediately (empty on first run), then calls `checkSpreadsheet()`. Since no spreadsheet ID is stored, it shows `SetupScreen`. Choose **"Create new spreadsheet"** to create a new `db_tasks` file seeded with sample data, or **"Choose from Google Drive"** to pick an existing spreadsheet via the Google Picker. The spreadsheet ID is cached in `localStorage` (`tasks-pwa-auth`).
 
 ### Available scripts
 
