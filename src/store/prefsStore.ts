@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { setCalendarScopesNeeded } from '@/store/authStore'
 
 const DEFAULT_SECTIONS: Record<string, boolean> = {
   priorities: true,
@@ -118,5 +119,7 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
       prioritiesEnabled, labelsEnabled, foldersEnabled,
       loaded: true,
     })
+    // Ensure refreshToken() requests calendar scopes on next call if calendar is enabled.
+    setCalendarScopesNeeded(calendarEnabled)
   },
 }))

@@ -12,6 +12,7 @@ interface TasksState {
   updateTask: (id: string, changes: Partial<Task>) => Promise<void>
   setTaskExpanded: (id: string, is_expanded: boolean) => Promise<void>
   completeTask: (id: string) => Promise<void>
+  restoreTask: (id: string) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   upsertMany: (tasks: Task[]) => Promise<void>
   getChildren: (parentId: string) => Task[]
@@ -69,9 +70,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     if (!existing) return
     const updated: Task = { ...existing, is_expanded }
     await db.tasks.put(updated)
-    await enqueue('task', 'update', id, updated as unknown as Record<string, unknown>)
     set((s) => ({ tasks: s.tasks.map(t => t.id === id ? updated : t) }))
-    void import('@/services/syncService').then(({ scheduleFlush }) => { scheduleFlush() })
   },
 
   completeTask: async (id) => {
@@ -96,12 +95,40 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     void import('@/services/syncService').then(({ flush }) => { void flush() })
   },
 
+  restoreTask: async (id) => {
+    const { updateTask, tasks } = get()
+    const toRestore: string[] = [id]
+    const collect = (parentId: string) => {
+      for (const t of tasks) {
+        if (t.parent_id === parentId) {
+          toRestore.push(t.id)
+          collect(t.id)
+        }
+      }
+    }
+    collect(id)
+    for (const taskId of toRestore) {
+      await updateTask(taskId, { status: 'pending', completed_at: '' })
+    }
+    void import('@/services/syncService').then(({ flush }) => { void flush() })
+  },
+
   deleteTask: async (id) => {
-    // Soft delete
-    const { updateTask } = get()
-    await updateTask(id, { status: 'deleted' })
-    // Remove from UI
-    set((s) => ({ tasks: s.tasks.filter(t => t.id !== id) }))
+    const { updateTask, tasks } = get()
+    const toDelete: string[] = [id]
+    const collect = (parentId: string) => {
+      for (const t of tasks) {
+        if (t.parent_id === parentId) {
+          toDelete.push(t.id)
+          collect(t.id)
+        }
+      }
+    }
+    collect(id)
+    for (const taskId of toDelete) {
+      await updateTask(taskId, { status: 'deleted' })
+    }
+    set((s) => ({ tasks: s.tasks.filter(t => !toDelete.includes(t.id)) }))
   },
 
   upsertMany: async (incoming) => {

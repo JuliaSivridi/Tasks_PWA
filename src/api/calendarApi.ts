@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import { useAuthStore } from '@/store/authStore'
 import type {
   CalendarEvent,
@@ -49,11 +50,8 @@ function parseDateTime(dt: EventDateTime): { date: string; time: string; isAllDa
   if (dt.date) {
     return { date: dt.date, time: '', isAllDay: true }
   }
-  const iso = dt.dateTime ?? ''
-  // ISO 8601 offset datetime — extract date (YYYY-MM-DD) and time (HH:MM)
-  const date = iso.slice(0, 10)
-  const time = iso.slice(11, 16)
-  return { date, time, isAllDay: false }
+  const d = new Date(dt.dateTime ?? '')
+  return { date: format(d, 'yyyy-MM-dd'), time: format(d, 'HH:mm'), isAllDay: false }
 }
 
 function dtoToCalendarEvent(
@@ -63,7 +61,7 @@ function dtoToCalendarEvent(
   calendarColor: string,
 ): CalendarEvent {
   const { date: startDate, time: startTime, isAllDay } = parseDateTime(dto.start)
-  const endTime = dto.end?.dateTime ? dto.end.dateTime.slice(11, 16) : ''
+  const endTime = dto.end?.dateTime ? format(new Date(dto.end.dateTime), 'HH:mm') : ''
 
   return {
     id: dto.id,

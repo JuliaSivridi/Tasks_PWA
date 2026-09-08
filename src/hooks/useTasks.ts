@@ -8,15 +8,6 @@ import { INBOX_FOLDER_ID } from '@/utils/constants'
 import type { CalendarEvent } from '@/types/calendarEvent'
 import type { Task } from '@/types/task'
 
-export type TaskGroup = {
-  key: string      // 'overdue' | 'YYYY-MM-DD'
-  label: string
-  isOverdue: boolean
-  isToday: boolean
-  isTomorrow: boolean
-  tasks: Task[]
-}
-
 // ── Merged task + event types (F-01) ──────────────────────────────────────────
 
 export type MergedItem =
@@ -30,54 +21,6 @@ export type MergedGroup = {
   isToday: boolean
   isTomorrow: boolean
   items: MergedItem[]
-}
-
-// ── Upcoming view: pending ROOT tasks with a deadline, grouped by day ─────────
-export function useUpcomingGroups(): TaskGroup[] {
-  const tasks = useTasksStore((s) => s.tasks)
-
-  return useMemo(() => {
-    // All pending tasks with a deadline, regardless of hierarchy level
-    const pending = tasks.filter(t => t.status === 'pending' && t.deadline_date)
-    const sorted = [...pending].sort((a, b) => a.deadline_date.localeCompare(b.deadline_date))
-
-    const today = startOfDay(new Date())
-    const groups = new Map<string, TaskGroup>()
-
-    for (const task of sorted) {
-      const date = parseISO(task.deadline_date)
-      const isOver = isBefore(date, today)
-      const key = isOver ? 'overdue' : task.deadline_date
-
-      if (!groups.has(key)) {
-        const isToday = !isOver && task.deadline_date === today.toISOString().slice(0, 10)
-        groups.set(key, {
-          key,
-          label: isOver ? 'Overdue' : formatDayGroupLabel(task.deadline_date),
-          isOverdue: isOver,
-          isToday,
-          isTomorrow: !isOver && isTomorrow(date),
-          tasks: [],
-        })
-      }
-      groups.get(key)!.tasks.push(task)
-    }
-
-    // Sort groups: overdue first, then chronological
-    const result = Array.from(groups.values())
-    result.sort((a, b) => {
-      if (a.isOverdue) return -1
-      if (b.isOverdue) return 1
-      return a.key.localeCompare(b.key)
-    })
-    // Within each group: sort by time (tasks without time go last)
-    for (const group of result) {
-      group.tasks.sort((a, b) =>
-        (a.deadline_time || '99:99').localeCompare(b.deadline_time || '99:99'),
-      )
-    }
-    return result
-  }, [tasks])
 }
 
 export const PRIORITY_ORDER: Record<string, number> = { urgent: 0, important: 1, normal: 2 }

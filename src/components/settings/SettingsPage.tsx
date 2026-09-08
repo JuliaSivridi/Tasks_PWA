@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, setCalendarScopesNeeded } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { usePrefsStore } from '@/store/prefsStore'
 import { useCalendarStore } from '@/store/calendarStore'
@@ -184,7 +184,10 @@ export function SettingsPage() {
 
   async function handleCalendarToggle(enabled: boolean) {
     setCalendarEnabled(enabled)
+    setCalendarScopesNeeded(enabled)
     if (enabled) {
+      // Request calendar scopes — shows incremental consent screen if not yet granted.
+      await useAuthStore.getState().refreshToken()
       setCalLoading(true)
       await fetchCalendarList()
       setCalLoading(false)

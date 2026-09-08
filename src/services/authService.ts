@@ -1,15 +1,11 @@
 import { useAuthStore, setTokenClient, resolveTokenRequest, rejectTokenRequest } from '@/store/authStore'
 
+// Base scopes requested on every login. Calendar scopes are added incrementally
+// via setCalendarScopesNeeded() when the user enables the Calendar feature.
 const SCOPES = [
   'email',
   'profile',
-  // drive.file: access only to files this app created or the user picked via
-  // the Google Picker — the app can no longer see the rest of Drive/Sheets.
   'https://www.googleapis.com/auth/drive.file',
-  // calendar.readonly = list calendars + read events; calendar.events = create/edit events.
-  // Narrower than the full 'calendar' scope (no access to calendar settings/sharing).
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/calendar.events',
 ].join(' ')
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 

@@ -22,6 +22,23 @@ interface AuthState {
   logout: () => void
 }
 
+const BASE_SCOPES = [
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/drive.file',
+].join(' ')
+
+const CALENDAR_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
+].join(' ')
+
+let _calendarScopesNeeded = false
+
+export function setCalendarScopesNeeded(v: boolean): void {
+  _calendarScopesNeeded = v
+}
+
 // GIS token client instance (set by authService)
 let _tokenClient: google.accounts.oauth2.TokenClient | null = null
 
@@ -89,7 +106,10 @@ export const useAuthStore = create<AuthState>()(
           _pendingResolve = resolve
           _pendingReject = reject
           // prompt: '' = silent refresh if possible, otherwise shows consent
-          _tokenClient.requestAccessToken({ prompt: '' })
+          _tokenClient.requestAccessToken({
+            prompt: '',
+            scope: _calendarScopesNeeded ? `${BASE_SCOPES} ${CALENDAR_SCOPES}` : BASE_SCOPES,
+          })
         }).finally(() => { _refreshInFlight = null })
         return _refreshInFlight
       },

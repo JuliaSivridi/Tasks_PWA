@@ -26,12 +26,8 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/sheets\.googleapis\.com\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'sheets-api',
-              networkTimeoutSeconds: 10,
-            },
+            urlPattern: /^https:\/\/.*\.googleapis\.com\//,
+            handler: 'NetworkOnly',
           },
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,

@@ -548,7 +548,7 @@ function CompletedView() {
   const tasks = useCompletedTasks()
   const { folders } = useFoldersStore()
   const { labels } = useLabelsStore()
-  const { updateTask, deleteTask } = useTasksStore()
+  const { deleteTask, restoreTask } = useTasksStore()
   const { taskFilters } = useUIStore()
   const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter } = taskFilters
 
@@ -572,7 +572,7 @@ function CompletedView() {
                 className="flex items-start gap-2 px-2 py-2 border-b border-border/40 hover:bg-accent/30 transition-colors group"
               >
                 <button
-                  onClick={() => void updateTask(task.id, { status: 'pending', completed_at: '' })}
+                  onClick={() => void restoreTask(task.id)}
                   className="mt-0.5 flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
                   title="Mark as pending"
                 >

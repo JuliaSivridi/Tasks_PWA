@@ -48,11 +48,10 @@ export function buildEndDateTime(
     return { date: next }
   }
 
-  // No end time or end ≤ start → +1 hour
+  // No end time or end ≤ start → +1 hour (may cross midnight)
   if (!endTime || endTime <= startTime) {
     const d = addHours(new Date(`${startDate}T${startTime}:00`), 1)
-    const newTime = format(d, 'HH:mm')
-    return buildEventDateTime(startDate, newTime)
+    return buildEventDateTime(format(d, 'yyyy-MM-dd'), format(d, 'HH:mm'))
   }
 
   return buildEventDateTime(startDate, endTime)
