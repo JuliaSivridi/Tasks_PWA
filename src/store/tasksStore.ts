@@ -14,7 +14,7 @@ interface TasksState {
   completeTask: (id: string) => Promise<void>
   restoreTask: (id: string) => Promise<void>
   deleteTask: (id: string) => Promise<void>
-  upsertMany: (tasks: Task[]) => Promise<void>
+  upsertMany: (tasks: Task[], protectedIds?: Set<string>) => Promise<void>
   getChildren: (parentId: string) => Task[]
   getRootTasks: (folderId?: string) => Task[]
   moveTasksToFolder: (fromFolderId: string, toFolderId: string) => Promise<void>
@@ -131,14 +131,25 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     set((s) => ({ tasks: s.tasks.filter(t => !toDelete.includes(t.id)) }))
   },
 
-  upsertMany: async (incoming) => {
-    // Conflict resolution: last-write-wins by updated_at
-    const existing = await db.tasks.bulkGet(incoming.map(t => t.id))
-    const toStore = incoming.map((remote, i) => {
-      const local = existing[i]
-      if (local && local.updated_at > remote.updated_at) return local
-      return remote
-    })
+  upsertMany: async (incoming, protectedIds) => {
+    // Prune tasks deleted on another device (cleared row → absent from Sheets),
+    // but keep tasks that still have unsent local changes in the queue.
+    const existing = await db.tasks.where('status').anyOf(['pending', 'completed']).toArray()
+    const incomingIds = new Set(incoming.map(t => t.id))
+    const toDelete = existing
+      .filter(t => !incomingIds.has(t.id) && !protectedIds?.has(t.id))
+      .map(t => t.id)
+    if (toDelete.length > 0) await db.tasks.bulkDelete(toDelete)
+
+    // LWW conflict resolution: last-write-wins by updated_at; skip protected (pending) tasks.
+    const existingMap = new Map(existing.map(t => [t.id, t]))
+    const toStore = incoming
+      .filter(t => !protectedIds?.has(t.id))
+      .map(remote => {
+        const local = existingMap.get(remote.id)
+        if (local && local.updated_at > remote.updated_at) return local
+        return remote
+      })
     await db.tasks.bulkPut(toStore)
     const all = await db.tasks.where('status').anyOf(['pending', 'completed']).toArray()
     set({ tasks: all })

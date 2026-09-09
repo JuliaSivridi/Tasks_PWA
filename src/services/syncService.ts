@@ -1,7 +1,7 @@
 import { fetchAllTasks, appendTask, updateTask as apiUpdateTask, ensureHeader } from '@/api/tasksApi'
 import { fetchAllFolders, appendFolder, updateFolder as apiUpdateFolder, ensureFolderHeader, clearFolderRow } from '@/api/foldersApi'
 import { fetchAllLabels, appendLabel, updateLabel as apiUpdateLabel, ensureLabelHeader, clearLabelRow } from '@/api/labelsApi'
-import { getPending, markProcessing, markDone, markFailed, getQueueLength } from '@/services/offlineQueue'
+import { getPending, resetProcessing, markDone, markFailed, getQueueLength } from '@/services/offlineQueue'
 import { invalidateRowCache } from '@/api/sheetsClient'
 import { listCalendars, listEvents } from '@/api/calendarApi'
 import { useTasksStore } from '@/store/tasksStore'
@@ -16,6 +16,7 @@ import { now } from '@/utils/dateUtils'
 import type { Task } from '@/types/task'
 import type { Folder } from '@/types/folder'
 import type { Label } from '@/types/label'
+import type { QueueItem, OperationType } from '@/types/sync'
 
 /**
  * Clears all local data (Dexie tables + in-memory store state).
@@ -58,38 +59,49 @@ async function processQueueItem(item: NonNullable<Awaited<ReturnType<typeof getP
 }
 
 export async function flush(): Promise<void> {
+  // Recover any items stuck in 'processing' from a session that was interrupted.
+  await resetProcessing()
+
   const items = await getPending()
   if (items.length === 0) return
 
-  // Deduplicate: for each (entityType, entityId, operationType) keep only the
-  // latest item. Older duplicates are discarded without sending to Sheets.
-  const latestMap = new Map<string, typeof items[0]>()
+  // Collapse all queue items for the same entity into one effective operation.
+  // Operation priority: delete > create > update (latest payload always wins).
+  type EntityEntry = { effectiveOp: OperationType; latestItem: QueueItem; allLocalIds: number[] }
+  const byEntity = new Map<string, EntityEntry>()
+
   for (const item of items) {
-    const key = `${item.entityType}:${item.entityId}:${item.operationType}`
-    const existing = latestMap.get(key)
-    if (!existing || item.createdAt > existing.createdAt) {
-      latestMap.set(key, item)
+    const key = `${item.entityType}:${item.entityId}`
+    const prev = byEntity.get(key)
+    if (!prev) {
+      byEntity.set(key, {
+        effectiveOp: item.operationType,
+        latestItem: item,
+        allLocalIds: item.localId ? [item.localId] : [],
+      })
+    } else {
+      const latestItem = item.createdAt > prev.latestItem.createdAt ? item : prev.latestItem
+      const allLocalIds = item.localId ? [...prev.allLocalIds, item.localId] : prev.allLocalIds
+      let effectiveOp: OperationType = prev.effectiveOp
+      if (prev.effectiveOp === 'delete' || item.operationType === 'delete') effectiveOp = 'delete'
+      else if (prev.effectiveOp === 'create' || item.operationType === 'create') effectiveOp = 'create'
+      byEntity.set(key, { effectiveOp, latestItem, allLocalIds })
     }
   }
-  const latestIds = new Set(Array.from(latestMap.values()).map(i => i.localId))
 
-  // Discard superseded items
-  for (const item of items) {
-    if (item.localId && !latestIds.has(item.localId)) {
-      await markDone(item.localId)
-    }
-  }
-
-  // Process only the latest item for each entity
-  for (const item of latestMap.values()) {
-    if (!item.localId) continue
+  for (const { effectiveOp, latestItem, allLocalIds } of byEntity.values()) {
+    const effectiveItem: QueueItem = { ...latestItem, operationType: effectiveOp }
     try {
-      await markProcessing(item.localId)
-      await processQueueItem(item)
-      await markDone(item.localId)
+      await processQueueItem(effectiveItem)
+      // On success remove all queue entries for this entity (including older duplicates).
+      for (const id of allLocalIds) await markDone(id)
     } catch (err) {
       console.error('Sync flush error', err)
-      await markFailed(item.localId, item.retryCount + 1)
+      // Keep only the latest entry for retry; discard older duplicates.
+      for (const id of allLocalIds) {
+        if (id === latestItem.localId) await markFailed(id, latestItem.retryCount + 1)
+        else await markDone(id)
+      }
     }
   }
 
@@ -148,7 +160,7 @@ export async function pull(): Promise<void> {
   const pendingIds = new Set((await getPending()).map(i => i.entityId))
 
   await Promise.all([
-    useTasksStore.getState().upsertMany(tasks),
+    useTasksStore.getState().upsertMany(tasks, pendingIds),
     useFoldersStore.getState().upsertMany(folders, pendingIds),
     useLabelsStore.getState().upsertMany(labels, pendingIds),
   ])

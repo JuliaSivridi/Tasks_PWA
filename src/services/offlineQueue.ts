@@ -28,8 +28,12 @@ export async function getPending(): Promise<QueueItem[]> {
     .sortBy('createdAt')
 }
 
-export async function markProcessing(localId: number): Promise<void> {
-  await db.queue.update(localId, { status: 'processing' })
+/** Resets items stuck in 'processing' (tab closed mid-flush) back to 'pending'. */
+export async function resetProcessing(): Promise<void> {
+  const stuck = await db.queue.where('status').equals('processing').toArray()
+  await Promise.all(
+    stuck.filter(i => i.localId).map(i => db.queue.update(i.localId!, { status: 'pending' })),
+  )
 }
 
 export async function markDone(localId: number): Promise<void> {
@@ -44,6 +48,7 @@ export async function getQueueLength(): Promise<number> {
   return db.queue
     .where('status')
     .anyOf(['pending', 'failed'])
+    .and(item => item.retryCount < 5)
     .count()
 }
 
