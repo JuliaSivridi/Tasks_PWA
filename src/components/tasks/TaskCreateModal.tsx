@@ -1074,8 +1074,7 @@ export function TaskCreateModal({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
                     onClick={() => {
                       if (isEditingEvent) {
                         if (editingEvent?.recurringEventId) setShowDeleteRecurDialog(true)
@@ -1085,7 +1084,8 @@ export function TaskCreateModal({
                       }
                     }}
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={15} />
+                    Delete
                   </Button>
                 )}
               </div>
