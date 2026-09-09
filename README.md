@@ -57,7 +57,7 @@ A personal task manager built as a **Progressive Web App** — the companion app
 **Sync & offline**
 - Full read/write offline via IndexedDB; sync queue flushes when back online
 - Every mutation writes to IndexedDB immediately, then syncs to Google Sheets in the background
-- On first sign-in the app automatically creates the `db_tasks` spreadsheet — no manual setup
+- On first run you choose your data file: create a new `db_tasks` spreadsheet (seeded with sample folders, labels, and tasks) or pick an existing one via the Google Picker — nothing is created silently
 - On logout, pending changes are flushed to Sheets and local data is cleared so the next account starts clean
 
 **PWA**
@@ -110,7 +110,7 @@ src/
 
 ## Data Model
 
-All data lives in the user's `db_tasks` Google Spreadsheet (found or created automatically on first login).
+All data lives in the user's `db_tasks` Google Spreadsheet, created or picked by the user on first run (`drive.file` scope — no silent Drive search).
 
 | Sheet | Columns (A → last) |
 |---|---|

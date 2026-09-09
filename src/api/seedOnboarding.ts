@@ -55,9 +55,10 @@ function entityRow(id: string, name: string, color: string, sortOrder: number): 
  * Seeds a freshly created "db_tasks" spreadsheet with sample folders, labels,
  * and tasks so a new user sees a useful starting state on first run.
  *
- * Called once, right after ensureSpreadsheet() returns { isNew: true },
- * before initialLoad(). Works by writing directly to Sheets via batchUpdate —
- * the same pattern as Words-PWA.
+ * Called once from SetupScreen right after createSpreadsheet() creates a new
+ * db_tasks file (the "Create new spreadsheet" path), before initialLoad().
+ * Works by writing directly to Sheets via batchUpdate — the same pattern as
+ * Words-PWA.
  */
 export async function seedOnboarding(): Promise<void> {
   const ts = now()
