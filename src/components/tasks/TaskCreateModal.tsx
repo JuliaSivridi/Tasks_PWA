@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Flag, Check, Tag, Plus, Folder as FolderIcon, X, CalendarDays, SkipForward } from 'lucide-react'
+import { Flag, Check, Tag, Plus, Folder as FolderIcon, X, CalendarDays, SkipForward, Trash2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -22,7 +22,7 @@ import { useLabelsStore } from '@/store/labelsStore'
 import { useFoldersStore } from '@/store/foldersStore'
 import { useCalendarStore } from '@/store/calendarStore'
 import { usePrefsStore } from '@/store/prefsStore'
-import { createEvent, updateEvent, getEvent } from '@/api/calendarApi'
+import { createEvent, updateEvent, getEvent, deleteEvent } from '@/api/calendarApi'
 import { buildEventDateTime, buildEndDateTime, parseEventDateTimeFromDto } from '@/utils/calendarDateTime'
 import { buildRRule, parseRRule, monthlyOptions, type RRuleFreq, type RRuleEnds } from '@/utils/rrule'
 import { pullCalendar } from '@/services/syncService'
@@ -134,6 +134,38 @@ function EditRecurringDialog({
   )
 }
 
+// ── Recurring-delete choice dialog ───────────────────────────────────────────
+
+function DeleteRecurringDialog({
+  open, onDeleteThis, onDeleteAll, onCancel,
+}: {
+  open: boolean
+  onDeleteThis: () => void
+  onDeleteAll: () => void
+  onCancel: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
+      <DialogContent className="max-w-sm z-[70]">
+        <DialogHeader>
+          <DialogTitle>Delete recurring event?</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full justify-start" onClick={onDeleteThis}>
+            Delete this event only
+          </Button>
+          <Button variant="outline" className="w-full justify-start" onClick={onDeleteAll}>
+            Delete all events in series
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── TaskCreateModal ───────────────────────────────────────────────────────────
 
 export function TaskCreateModal({
@@ -141,11 +173,11 @@ export function TaskCreateModal({
   defaultMode, defaultCalendarId,
   onClose,
 }: Props) {
-  const { addTask, updateTask } = useTasksStore()
+  const { addTask, updateTask, deleteTask } = useTasksStore()
   const { selectedFolderId, selectedView } = useUIStore()
   const { labels, addLabel } = useLabelsStore()
   const { folders } = useFoldersStore()
-  const { calendars, upsertEvent } = useCalendarStore()
+  const { calendars, upsertEvent, removeEvent } = useCalendarStore()
   const { calendarEnabled, enabledCalendarIds, prioritiesEnabled, labelsEnabled, foldersEnabled } = usePrefsStore()
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -175,6 +207,11 @@ export function TaskCreateModal({
 
   // Edit recurring dialog
   const [showEditRecurDialog, setShowEditRecurDialog] = useState(false)
+
+  // Delete confirm dialogs
+  const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false)
+  const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false)
+  const [showDeleteRecurDialog, setShowDeleteRecurDialog] = useState(false)
 
   const dateInputRef = useRef<HTMLInputElement>(null)
   const startTimeInputRef = useRef<HTMLInputElement>(null)
@@ -490,6 +527,28 @@ export function TaskCreateModal({
         sort_order: 0,
       })
     }
+    onClose()
+  }
+
+  // ── Delete handlers ───────────────────────────────────────────────────────
+
+  const handleDeleteTask = async () => {
+    if (!editing) return
+    await deleteTask(editing.id)
+    onClose()
+  }
+
+  const handleDeleteEventThis = async () => {
+    if (!editingEvent) return
+    await deleteEvent(editingEvent.calendarId, editingEvent.id)
+    await removeEvent(editingEvent.id)
+    onClose()
+  }
+
+  const handleDeleteEventAll = async () => {
+    if (!editingEvent?.recurringEventId) return
+    await deleteEvent(editingEvent.calendarId, editingEvent.recurringEventId)
+    void pullCalendar()
     onClose()
   }
 
@@ -1009,11 +1068,33 @@ export function TaskCreateModal({
             )}
 
             {/* ── Buttons row ─────────────────────────────────────────── */}
-            <div className="flex items-center justify-end gap-2 pt-1 pb-1">
+            <div className="flex items-center justify-between pt-1 pb-1">
+              <div>
+                {(isEditing || isEditingEvent) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (isEditingEvent) {
+                        if (editingEvent?.recurringEventId) setShowDeleteRecurDialog(true)
+                        else setShowDeleteEventConfirm(true)
+                      } else {
+                        setShowDeleteTaskConfirm(true)
+                      }
+                    }}
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
                 <Button type="submit">
                   {isEditing || isEditingEvent ? 'Save' : 'Create'}
                 </Button>
+              </div>
             </div>
           </form>
         </DialogContent>
@@ -1157,6 +1238,43 @@ export function TaskCreateModal({
         onEditThis={() => void submitEvent('this')}
         onEditAll={() => void submitEvent('all')}
         onCancel={() => setShowEditRecurDialog(false)}
+      />
+
+      {/* ── Delete task confirm ───────────────────────────────────────────── */}
+      <Dialog open={showDeleteTaskConfirm} onOpenChange={(v) => !v && setShowDeleteTaskConfirm(false)}>
+        <DialogContent className="max-w-sm z-[70]">
+          <DialogHeader>
+            <DialogTitle>Delete task?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This will delete the task and all its subtasks.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowDeleteTaskConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => void handleDeleteTask()}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete non-recurring event confirm ───────────────────────────── */}
+      <Dialog open={showDeleteEventConfirm} onOpenChange={(v) => !v && setShowDeleteEventConfirm(false)}>
+        <DialogContent className="max-w-sm z-[70]">
+          <DialogHeader>
+            <DialogTitle>Delete event?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowDeleteEventConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => void handleDeleteEventThis()}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete recurring event dialog ─────────────────────────────────── */}
+      <DeleteRecurringDialog
+        open={showDeleteRecurDialog}
+        onDeleteThis={() => void handleDeleteEventThis()}
+        onDeleteAll={() => void handleDeleteEventAll()}
+        onCancel={() => setShowDeleteRecurDialog(false)}
       />
     </>
   )
