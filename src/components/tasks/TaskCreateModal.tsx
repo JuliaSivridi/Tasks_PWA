@@ -626,9 +626,9 @@ export function TaskCreateModal({
             {formMode === 'task' && (
               <>
                 {/* Deadline + Time */}
-                <div className="grid grid-cols-2 gap-2 items-end">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between h-7">
                       <Label className="text-muted-foreground text-sm">Due date</Label>
                       <div className="flex gap-1.5">
                         {(deadlineDate || deadlineTime) && (
@@ -656,7 +656,9 @@ export function TaskCreateModal({
                     <Input type="date" {...register('deadline_date')} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-sm">Time</Label>
+                    <div className="flex items-center h-7">
+                      <Label className="text-muted-foreground text-sm">Time</Label>
+                    </div>
                     <Input type="time" {...register('deadline_time')} />
                   </div>
                 </div>

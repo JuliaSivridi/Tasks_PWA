@@ -93,9 +93,9 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
 
         <div className="space-y-4">
           {/* Date always shown */}
-          <div className="grid grid-cols-2 gap-2 items-end">
+          <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between h-7">
                 <Label>Date</Label>
                 <div className="flex gap-1.5">
                   {(date || time) && (
@@ -126,7 +126,7 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
             {/* A-05: Time chip hidden when no date */}
             {date && (
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between h-7">
                   <Label>Time</Label>
                 </div>
                 <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
