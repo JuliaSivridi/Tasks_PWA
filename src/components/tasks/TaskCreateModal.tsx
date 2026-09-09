@@ -630,15 +630,15 @@ export function TaskCreateModal({
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-muted-foreground text-sm">Due date</Label>
-                      <div className="flex gap-0.5">
+                      <div className="flex gap-1.5">
                         {(deadlineDate || deadlineTime) && (
                           <button
                             type="button"
                             title="Clear deadline"
                             onClick={handleClear}
-                            className="p-0.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-destructive transition-colors"
                           >
-                            <X size={13} />
+                            <X size={15} />
                           </button>
                         )}
                         {isEditing && isRecurring && deadlineDate && (
@@ -646,9 +646,9 @@ export function TaskCreateModal({
                             type="button"
                             title="Postpone"
                             onClick={handlePostpone}
-                            className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                            className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                           >
-                            <SkipForward size={13} />
+                            <SkipForward size={15} />
                           </button>
                         )}
                       </div>
