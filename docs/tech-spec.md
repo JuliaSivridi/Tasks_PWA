@@ -410,7 +410,7 @@ Database name: **`TaskManagerDB`**
 | Table | Dexie schema string | Notes |
 |---|---|---|
 | tasks | `&id, parent_id, folder_id, status, updated_at` | `&id` = unique primary key |
-| folders | `&id, parent_id` | |
+| folders | `&id` | `parent_id` index removed in v3 |
 | labels | `&id` | |
 | queue | `++localId, entityType, operationType, status, createdAt` | `++localId` = auto-increment PK |
 
@@ -762,7 +762,7 @@ Focused deadline/recurrence editor. Fields: date + time (two-column row; time hi
 
 Two-row layout mirroring `TaskItem`. Row 1: spacer | `CalendarDays` icon | title | Clock button + `...` dropdown (Edit, Delete). Row 2: time label | `CalendarDays` icon | calendar name.
 
-Delete: if recurring, shows `RecurringDeleteDialog`; otherwise `ConfirmDialog`. Clock button opens `EventScheduleDialog`. Read-only calendars (`isEditable === false`): no action buttons, replaced with a `w-[54px]` spacer so titles align with editable events.
+Delete: if recurring, shows `RecurringDeleteDialog`; otherwise `ConfirmDialog`. On network error a `Toast` appears ("Failed to delete event..."); the event is not removed from the local store. Clock button opens `EventScheduleDialog`. Read-only calendars (`isEditable === false`): no action buttons, replaced with a `w-[54px]` spacer so titles align with editable events.
 
 ### EventScheduleDialog
 
@@ -1203,6 +1203,8 @@ function parseSmartTitle(raw, folders, labels, currentFolderId, currentLabelIds,
     priority,
   }
 ```
+
+
 
 
 
