@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Flag, Check, Tag, Plus, Folder as FolderIcon, X, CalendarDays } from 'lucide-react'
+import { Flag, Check, Tag, Plus, Folder as FolderIcon, X, CalendarDays, SkipForward } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -569,7 +569,31 @@ export function TaskCreateModal({
                 {/* Deadline + Time */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-muted-foreground text-sm">Due date</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-muted-foreground text-sm">Due date</Label>
+                      <div className="flex gap-0.5">
+                        {(deadlineDate || deadlineTime) && (
+                          <button
+                            type="button"
+                            title="Clear deadline"
+                            onClick={handleClear}
+                            className="p-0.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                        {isEditing && isRecurring && deadlineDate && (
+                          <button
+                            type="button"
+                            title="Postpone"
+                            onClick={handlePostpone}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <SkipForward size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <Input type="date" {...register('deadline_date')} />
                   </div>
                   <div className="space-y-1">
@@ -985,25 +1009,11 @@ export function TaskCreateModal({
             )}
 
             {/* ── Buttons row ─────────────────────────────────────────── */}
-            <div className="flex items-center justify-between pt-1 pb-1">
-              <div className="flex gap-1">
-                {isEditing && formMode === 'task' && (deadlineDate || deadlineTime) && (
-                  <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
-                    Clear
-                  </Button>
-                )}
-                {isEditing && formMode === 'task' && isRecurring && deadlineDate && (
-                  <Button type="button" variant="ghost" size="sm" onClick={handlePostpone}>
-                    Postpone
-                  </Button>
-                )}
-              </div>
-              <div className="flex gap-2">
+            <div className="flex items-center justify-end gap-2 pt-1 pb-1">
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
                 <Button type="submit">
                   {isEditing || isEditingEvent ? 'Save' : 'Create'}
                 </Button>
-              </div>
             </div>
           </form>
         </DialogContent>

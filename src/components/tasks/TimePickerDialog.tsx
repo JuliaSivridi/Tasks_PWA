@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { X, SkipForward } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
@@ -94,7 +95,31 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
           {/* Date always shown */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label>Date</Label>
+              <div className="flex items-center justify-between">
+                <Label>Date</Label>
+                <div className="flex gap-0.5">
+                  {(date || time) && (
+                    <button
+                      type="button"
+                      title="Clear deadline"
+                      onClick={() => void handleClearAll()}
+                      className="p-0.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                  {isRecurring && date && (
+                    <button
+                      type="button"
+                      title="Postpone"
+                      onClick={() => void handlePostpone()}
+                      className="p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <SkipForward size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
 
@@ -153,25 +178,9 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex gap-1">
-            {/* A-05: Clear visible when date OR time is set */}
-            {(date || time) && (
-              <Button variant="ghost" size="sm" onClick={() => void handleClearAll()}>
-                Clear
-              </Button>
-            )}
-            {/* A-05: Postpone uses local isRecurring + date */}
-            {isRecurring && date && (
-              <Button variant="ghost" size="sm" onClick={() => void handlePostpone()}>
-                Postpone
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => void handleSave()}>Save</Button>
-          </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => void handleSave()}>Save</Button>
         </div>
       </DialogContent>
     </Dialog>
