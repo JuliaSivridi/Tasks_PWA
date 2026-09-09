@@ -93,7 +93,7 @@ export function TimePickerDialog({ open, task, onClose }: Props) {
 
         <div className="space-y-4">
           {/* Date always shown */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 items-end">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label>Date</Label>

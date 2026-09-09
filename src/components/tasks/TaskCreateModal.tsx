@@ -626,7 +626,7 @@ export function TaskCreateModal({
             {formMode === 'task' && (
               <>
                 {/* Deadline + Time */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 items-end">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-muted-foreground text-sm">Due date</Label>
