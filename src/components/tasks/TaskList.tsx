@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Plus, FolderOpen, Trash2, RotateCcw, Tag, ChevronLeft, ChevronRight, Calendar, Folder, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 import { format, startOfWeek, addDays, parseISO, isBefore, startOfDay } from 'date-fns'
 import { TaskItem } from './TaskItem'
+import { Toast } from '@/components/common/Toast'
 import { TaskCreateModal } from './TaskCreateModal'
 import { CalendarEventItem } from '@/components/calendar/CalendarEventItem'
 import {
@@ -114,6 +115,7 @@ function filterMatrix(
 
 function useEventHandlers() {
   const { removeEvent } = useCalendarStore()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleDelete = useCallback(async (event: CalendarEvent) => {
     try {
@@ -121,6 +123,7 @@ function useEventHandlers() {
       await removeEvent(event.id)
     } catch (err) {
       console.error('Delete event error', err)
+      setDeleteError('Failed to delete event. Check your connection and try again.')
     }
   }, [removeEvent])
 
@@ -128,13 +131,14 @@ function useEventHandlers() {
     if (!event.recurringEventId) return
     try {
       await deleteEvent(event.calendarId, event.recurringEventId)
-      void pullCalendar()   // re-pull to remove all instances
+      void pullCalendar()
     } catch (err) {
       console.error('Delete series error', err)
+      setDeleteError('Failed to delete event series. Check your connection and try again.')
     }
   }, [])
 
-  return { handleDelete, handleDeleteSeries }
+  return { handleDelete, handleDeleteSeries, deleteError, clearDeleteError: () => setDeleteError(null) }
 }
 
 // ── Week navigation strip ─────────────────────────────────────────────────────
@@ -209,7 +213,7 @@ function WeekStrip({
 function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: CalendarEvent) => void }) {
   const groups = useUpcomingGroupsWithEvents()
   const { setCreateTaskOpen, taskFilters } = useUIStore()
-  const { handleDelete, handleDeleteSeries } = useEventHandlers()
+  const { handleDelete, handleDeleteSeries, deleteError, clearDeleteError } = useEventHandlers()
   const calendars = useCalendarStore(s => s.calendars)
 
   const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter, calendars: calendarFilter } = taskFilters
@@ -318,6 +322,7 @@ function UpcomingView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
 
   return (
     <div className="flex flex-col h-full">
+      {deleteError && <Toast message={deleteError} onDone={clearDeleteError} />}
       <WeekStrip
         weekOffset={weekOffset} activeDate={activeDate}
         datesWithContent={datesWithContent}
@@ -437,7 +442,7 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
   const calendars = useCalendarStore(s => s.calendars)
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
   const { setCreateTaskOpen, taskFilters } = useUIStore()
-  const { handleDelete, handleDeleteSeries } = useEventHandlers()
+  const { handleDelete, handleDeleteSeries, deleteError, clearDeleteError } = useEventHandlers()
 
   const { priorities: priorityFilter, labels: labelFilter, folders: folderFilter, calendars: calendarFilter } = taskFilters
 
@@ -511,6 +516,7 @@ function AllTasksView({ onEditCalendarEvent }: { onEditCalendarEvent: (e: Calend
 
   return (
     <div className="flex flex-col h-full">
+      {deleteError && <Toast message={deleteError} onDone={clearDeleteError} />}
       {merged.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
           <FolderOpen size={40} className="opacity-20" />
@@ -621,7 +627,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
   const { selectedCalendarId } = useUIStore()
   const calendarEnabled = usePrefsStore(s => s.calendarEnabled)
   const events = useCalendarEvents(selectedCalendarId ?? '')
-  const { handleDelete, handleDeleteSeries } = useEventHandlers()
+  const { handleDelete, handleDeleteSeries, deleteError, clearDeleteError } = useEventHandlers()
   const calendars = useCalendarStore(s => s.calendars)
 
   const today = startOfDay(new Date())
@@ -677,6 +683,7 @@ function CalendarEventListView({ onEditCalendarEvent }: { onEditCalendarEvent: (
 
   return (
     <div className="flex-1 overflow-y-auto p-2 space-y-4">
+      {deleteError && <Toast message={deleteError} onDone={clearDeleteError} />}
       {groups.map(group => (
         <div key={group.key}>
           <div className={cn('px-2 py-1 text-sm font-bold mb-1', group.isOverdue ? 'text-red-400' : 'text-muted-foreground')}>
@@ -752,3 +759,4 @@ export function TaskList() {
     </div>
   )
 }
+

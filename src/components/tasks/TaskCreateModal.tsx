@@ -27,6 +27,7 @@ import { buildEventDateTime, buildEndDateTime, parseEventDateTimeFromDto } from 
 import { buildRRule, parseRRule, monthlyOptions, type RRuleFreq, type RRuleEnds } from '@/utils/rrule'
 import { pullCalendar } from '@/services/syncService'
 import { INBOX_FOLDER_ID, LABEL_COLOR_PRESETS } from '@/utils/constants'
+import { Toast } from '@/components/common/Toast'
 import { cn } from '@/lib/utils'
 import { parseSmartTitle } from '@/utils/smartTitle'
 import { addDays, addWeeks, addMonths, addYears, format, parseISO, getDay } from 'date-fns'
@@ -212,6 +213,7 @@ export function TaskCreateModal({
   const [showDeleteTaskConfirm, setShowDeleteTaskConfirm] = useState(false)
   const [showDeleteEventConfirm, setShowDeleteEventConfirm] = useState(false)
   const [showDeleteRecurDialog, setShowDeleteRecurDialog] = useState(false)
+  const [deleteErrorToast, setDeleteErrorToast] = useState<string | null>(null)
 
   const dateInputRef = useRef<HTMLInputElement>(null)
   const startTimeInputRef = useRef<HTMLInputElement>(null)
@@ -534,22 +536,37 @@ export function TaskCreateModal({
 
   const handleDeleteTask = async () => {
     if (!editing) return
-    await deleteTask(editing.id)
-    onClose()
+    try {
+      await deleteTask(editing.id)
+      onClose()
+    } catch (err) {
+      console.error('Delete task error', err)
+      setDeleteErrorToast('Failed to delete task. Check your connection and try again.')
+    }
   }
 
   const handleDeleteEventThis = async () => {
     if (!editingEvent) return
-    await deleteEvent(editingEvent.calendarId, editingEvent.id)
-    await removeEvent(editingEvent.id)
-    onClose()
+    try {
+      await deleteEvent(editingEvent.calendarId, editingEvent.id)
+      await removeEvent(editingEvent.id)
+      onClose()
+    } catch (err) {
+      console.error('Delete event error', err)
+      setDeleteErrorToast('Failed to delete event. Check your connection and try again.')
+    }
   }
 
   const handleDeleteEventAll = async () => {
     if (!editingEvent?.recurringEventId) return
-    await deleteEvent(editingEvent.calendarId, editingEvent.recurringEventId)
-    void pullCalendar()
-    onClose()
+    try {
+      await deleteEvent(editingEvent.calendarId, editingEvent.recurringEventId)
+      void pullCalendar()
+      onClose()
+    } catch (err) {
+      console.error('Delete series error', err)
+      setDeleteErrorToast('Failed to delete event series. Check your connection and try again.')
+    }
   }
 
   // ── Deadline chip helpers (EVENT mode) ────────────────────────────────────
@@ -1278,6 +1295,8 @@ export function TaskCreateModal({
         onDeleteAll={() => void handleDeleteEventAll()}
         onCancel={() => setShowDeleteRecurDialog(false)}
       />
+
+      {deleteErrorToast && <Toast message={deleteErrorToast} onDone={() => setDeleteErrorToast(null)} />}
     </>
   )
 }

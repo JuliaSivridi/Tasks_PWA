@@ -23,6 +23,9 @@ export class TaskManagerDB extends Dexie {
     this.version(2).stores({
       calendarEvents: '&id, startDate, calendarId',
     })
+    this.version(3).stores({
+      folders: '&id',  // drop unused parent_id index (Folder type has no parent_id)
+    })
   }
 }
 
