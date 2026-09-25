@@ -148,7 +148,8 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       .map(remote => {
         const local = existingMap.get(remote.id)
         if (local && local.updated_at > remote.updated_at) return local
-        return remote
+        // is_expanded is local UI state, never stored in Sheets — preserve it
+        return local ? { ...remote, is_expanded: local.is_expanded } : remote
       })
     await db.tasks.bulkPut(toStore)
     const all = await db.tasks.where('status').anyOf(['pending', 'completed']).toArray()
