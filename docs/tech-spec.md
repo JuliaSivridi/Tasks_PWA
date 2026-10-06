@@ -273,7 +273,7 @@ Tasks-PWA/
 | created_at | string | ISO 8601 datetime |
 | updated_at | string | ISO 8601 datetime, updated on every mutation |
 | completed_at | string | ISO 8601 datetime or `''` |
-| is_expanded | boolean | Whether subtask list is expanded in UI |
+| is_expanded | boolean | Whether subtask list is expanded in UI. Local-only — never written to the sync queue; on pull the local value always takes precedence over the Sheets value. |
 
 **Invariants:**
 - Root tasks have `parent_id === ''`.
@@ -550,7 +550,7 @@ All seeded tasks have `status: 'pending'`, `parent_id: ''`, `is_recurring: 'FALS
 ### Pull path
 
 `pull()` first calls `invalidateRowCache()` (another device may have reordered rows since the cache was built), then fetches all tasks, folders, labels in parallel (`Promise.all`). It builds `pendingIds` from the queue before calling `upsertMany`. For each entity list, `upsertMany()` is called:
-- **Tasks:** for each incoming task, compare `updated_at` with local Dexie record; keep the newer. `bulkPut` all resolved records. Reload all `pending | completed` tasks from Dexie into Zustand.
+- **Tasks:** for each incoming task, compare `updated_at` with local Dexie record; keep the newer. When remote wins, `is_expanded` is still taken from the local record — it is local-only UI state and Sheets always stores `FALSE` for it, so overwriting would collapse the task hierarchy on every pull. `bulkPut` all resolved records. Reload all `pending | completed` tasks from Dexie into Zustand.
 - **Folders / Labels:** entities absent from the incoming Sheets data but present in Dexie are pruned (deleted on another device) вЂ” unless their ID is in `pendingIds` (has unsent local changes). `bulkPut` surviving records.
 
 ### Cache-first startup
